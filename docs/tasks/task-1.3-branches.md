@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 1 — Foundation |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 1.2 |
 | Blocks | 1.7 and every branch-scoped module |
 | Spec references | `docs/api/academic-structure.md`, `docs/database-schema.md` → `branches` |
@@ -39,11 +39,11 @@ Failures: duplicate `code` → 422 `errors.code`; missing name/code → 422; non
 ```
 
 ## Success Criteria
-- [ ] CRUD complete with envelope responses and pagination meta
-- [ ] `code` uniqueness enforced; delete-in-use → 409
-- [ ] Only super admin can access (teacher → 403)
-- [ ] Seeder creates both real branches
-- [ ] Tests green
+- [x] CRUD complete with envelope responses and pagination meta
+- [x] `code` uniqueness enforced; delete-in-use → 409
+- [x] Only super admin can access (teacher → 403)
+- [x] Seeder creates both real branches
+- [x] Tests green
 
 ## Required Tests
 1. create happy path; duplicate code 422
