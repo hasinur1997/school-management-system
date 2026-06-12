@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 1 — Foundation |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 1.4 |
 | Blocks | Subjects (1.6), admissions, enrollments, promotion |
 | Spec references | `docs/api/academic-structure.md`, schema → `school_classes`, `sections` |
@@ -34,9 +34,9 @@ Duplicate name in class → 422.
 ### DELETE class/section — 409 when in use.
 
 ## Success Criteria
-- [ ] Unique constraints enforced; reads open to all roles, writes only `class.manage`
-- [ ] Classes ordered by level; sections nested in class responses
-- [ ] Delete-in-use 409 · Tests green
+- [x] Unique constraints enforced; reads open to all roles, writes only `class.manage`
+- [x] Classes ordered by level; sections nested in class responses
+- [x] Delete-in-use 409 · Tests green
 
 ## Required Tests
 1. create class happy + duplicate-level 422

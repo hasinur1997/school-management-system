@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             BranchSeeder::class,
             AcademicSessionSeeder::class,
+            SchoolClassSeeder::class,
         ]);
 
         User::factory()->create([
