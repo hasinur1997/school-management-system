@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BranchController;
+use App\Http\Controllers\Api\V1\SessionController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('v1.')->group(function () {
@@ -15,6 +16,14 @@ Route::prefix('v1')->name('v1.')->group(function () {
             Route::get('me', [AuthController::class, 'me'])->name('me');
             Route::post('change-password', [AuthController::class, 'changePassword'])->name('change-password');
         });
+    });
+
+    Route::middleware(['auth:sanctum', 'permission:session.manage'])->group(function () {
+        Route::get('sessions', [SessionController::class, 'index'])->name('sessions.index');
+        Route::post('sessions', [SessionController::class, 'store'])->name('sessions.store');
+        Route::get('sessions/{session}', [SessionController::class, 'show'])->name('sessions.show');
+        Route::put('sessions/{session}', [SessionController::class, 'update'])->name('sessions.update');
+        Route::delete('sessions/{session}', [SessionController::class, 'destroy'])->name('sessions.destroy');
     });
 
     Route::middleware(['auth:sanctum', 'permission:branch.manage'])->group(function () {

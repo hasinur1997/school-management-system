@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 1 — Foundation |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 1.3 |
 | Blocks | Enrollments, exams, fee structures (Phases 3+) |
 | Spec references | `docs/api/academic-structure.md`, schema → `academic_sessions` |
@@ -32,9 +32,9 @@ Failures: duplicate name → 422; `end_date <= start_date` → 422 `errors.end_d
 ### DELETE /sessions/{id} — 409 if referenced by enrollments/exams/fee structures.
 
 ## Success Criteria
-- [ ] Exactly one current session is guaranteed after any write
-- [ ] Date-order validation; duplicate-name 422; delete-in-use 409
-- [ ] Tests green
+- [x] Exactly one current session is guaranteed after any write
+- [x] Date-order validation; duplicate-name 422; delete-in-use 409
+- [x] Tests green
 
 ## Required Tests
 1. create as current unsets previous current (assert DB)
