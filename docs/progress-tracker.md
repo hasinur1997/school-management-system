@@ -6,7 +6,7 @@
 Specs: `api/auth.md`, `api/academic-structure.md`
 
 - [x] [1.1](tasks/task-1.1-authentication.md) — Sanctum setup
-- [ ] [1.2](tasks/task-1.2-roles-permissions.md) — spatie/laravel-permission setup
+- [x] [1.2](tasks/task-1.2-roles-permissions.md) — spatie/laravel-permission setup
 - [ ] [1.3](tasks/task-1.3-branches.md) — `branches` migration + model + CRUD (super admin only)
 - [ ] [1.4](tasks/task-1.4-academic-sessions.md) — `academic_sessions` migration + CRUD
 - [ ] [1.5](tasks/task-1.5-classes-sections.md) — `school_classes` + `sections` migrations + CRUD
@@ -134,3 +134,6 @@ Specs: `api/settings.md`
 - 2026-06-11 — Execution model: module-based phases, task-based work units (this board).
 - 2026-06-12 — Task 1.1: `users.branch_id` is created as an indexed nullable bigint **without** the FK constraint, because `branches` doesn't exist yet — the `create_branches_table` migration (Task 1.3) must add `foreign('branch_id')->references('id')->on('branches')` to `users`.
 - 2026-06-12 — Task 1.1: API exception envelope handled centrally in `bootstrap/app.php` render closures (401/403/404/422 + generic HttpException incl. 429); success envelope via `App\Http\Controllers\Api\ApiController::success()`. Later tasks reuse both.
+- 2026-06-12 — Task 1.2: `super_admin` role holds **zero** explicit permissions; bypass is `Gate::before` (`User::isSuperAdmin()`) in `AuthServiceProvider`. `UserResource` reports *effective* permissions, so super admins get the full permission list in `/auth/me` per the ticket's contract example.
+- 2026-06-12 — Task 1.2: spatie's `UnauthorizedException` gets a dedicated render closure in `bootstrap/app.php` (registered **before** the generic `HttpExceptionInterface` closure — render closures match in registration order) so `permission:` middleware failures return the standard `{"success": false, "message": "This action is unauthorized."}` 403 envelope instead of spatie's default message.
+- 2026-06-12 — Task 1.2: role bundle judgment calls (ticket said "sensible bundles"): admin additionally got `session.manage`, `class.manage`, `subject.manage` (academic structure is admin work; only branch CRUD is super-admin-only per the board), plus exam/attendance/teacher_attendance/result permissions, but **not** `marks.entry` (teachers enter marks), `branch.manage`, `setting.manage`, or finance (`income.manage`/`expense.manage`/`asset.manage` stay accountant-only). Accountant got `invoice.view` on top of the literal "finance + fee.collect + report.view" (collecting fees requires seeing invoices). Bundles live in `RoleSeeder::ROLES`; permission list in `PermissionSeeder::PERMISSIONS`.

@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 1 — Foundation |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 1.1 |
 | Blocks | Every permission-protected endpoint (all later tasks) |
 | Spec references | `docs/architecture-context.md` → Auth model, `docs/api-spec.md` |
