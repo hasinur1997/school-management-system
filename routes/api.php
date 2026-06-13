@@ -104,6 +104,11 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::get('admissions/{admission}', [AdmissionController::class, 'show'])->name('admissions.show');
     });
 
+    Route::middleware(['auth:sanctum', 'permission:admission.approve'])->group(function () {
+        Route::post('admissions/{admission}/approve', [AdmissionController::class, 'approve'])->name('admissions.approve');
+        Route::post('admissions/{admission}/reject', [AdmissionController::class, 'reject'])->name('admissions.reject');
+    });
+
     Route::middleware(['auth:sanctum', 'permission:teacher.update'])->group(function () {
         Route::get('teacher-assignments', [TeacherAssignmentController::class, 'index'])->name('teacher-assignments.index');
         Route::post('teacher-assignments', [TeacherAssignmentController::class, 'store'])->name('teacher-assignments.store');

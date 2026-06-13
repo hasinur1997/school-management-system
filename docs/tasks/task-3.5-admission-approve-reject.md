@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 3 — Admissions |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 3.2, 3.4, 2.2 (credentials job) |
 | Blocks | Phase 4 |
 | Spec references | `docs/api/admissions.md` |

@@ -3,11 +3,24 @@
 namespace App\Services;
 
 use App\Enums\AdmissionStatus;
+use App\Enums\EnrollmentStatus;
+use App\Enums\StudentStatus;
+use App\Jobs\SendCredentials;
+use App\Models\AcademicSession;
 use App\Models\AdmissionApplication;
+use App\Models\Enrollment;
+use App\Models\ParentProfile;
+use App\Models\SchoolClass;
+use App\Models\Section;
+use App\Models\Student;
+use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 /**
  * Owns the public admission write/read paths. The submission persists the
@@ -17,7 +30,10 @@ use Illuminate\Support\Facades\DB;
  */
 class AdmissionService
 {
-    public function __construct(private readonly ApplicationNoGenerator $applicationNos) {}
+    public function __construct(
+        private readonly ApplicationNoGenerator $applicationNos,
+        private readonly AdmissionNoGenerator $admissionNos,
+    ) {}
 
     /**
      * Persist a public admission submission atomically: the application row
@@ -105,6 +121,168 @@ class AdmissionService
     public function loadDetail(AdmissionApplication $application): AdmissionApplication
     {
         return $application->load(['desiredClass', 'previousEducations', 'reviewer', 'media']);
+    }
+
+    /**
+     * Approve an application, converting it into a real student in ONE
+     * transaction: a student login (email null, phone = father_mobile, random
+     * password), the student row (a faithful copy of the application data plus
+     * its photo), the active enrollment, and — when requested — a linked parent
+     * login + profile + parent_student row. The application is marked approved
+     * with the reviewer stamped. Any failure rolls back every row. Credential
+     * jobs are dispatched only afterCommit, so they never fire on a rollback.
+     *
+     * @param  array<string, mixed>  $data  Validated approval input.
+     * @return array{student: Student, parent_created: bool}
+     */
+    public function approve(AdmissionApplication $application, array $data): array
+    {
+        if ($application->status !== AdmissionStatus::Pending) {
+            abort(409, 'Application has already been reviewed.');
+        }
+
+        $reviewerId = Auth::id();
+
+        return DB::transaction(function () use ($application, $data, $reviewerId): array {
+            $branchId = $application->branch_id;
+
+            $session = AcademicSession::findOrFail($data['session_id']);
+            $class = SchoolClass::findOrFail($data['class_id']);
+            $section = Section::findOrFail($data['section_id']);
+
+            // Resolve the parent's contact up front (when requested) so the
+            // student/parent logins never collide on the globally-unique
+            // users.phone: the parent is the human who actually owns the shared
+            // number and must be able to log in, so they claim it and the
+            // student's phone is left null when the two would be identical.
+            $createParent = (bool) $data['create_parent_account'];
+            $parentName = $parentPhone = null;
+
+            if ($createParent) {
+                [$parentName, $parentPhone] = match ($data['parent_relation']) {
+                    'mother' => [$application->mother_name_en, $application->mother_mobile ?: $application->father_mobile],
+                    default => [$application->father_name_en, $application->father_mobile],
+                };
+            }
+
+            $studentPhone = $application->father_mobile;
+            if ($createParent && $parentPhone === $studentPhone) {
+                $studentPhone = null;
+            }
+
+            // Student login — phone is the only identifier (email null per spec).
+            $studentPassword = Str::password(10);
+            $studentUser = User::create([
+                'branch_id' => $branchId,
+                'name' => $application->name_en,
+                'email' => null,
+                'phone' => $studentPhone,
+                'password' => Hash::make($studentPassword),
+                'is_active' => true,
+            ]);
+            $studentUser->assignRole('student');
+
+            $admissionNo = $data['admission_no']
+                ?? $this->admissionNos->generate($branchId, (int) $session->start_date->year);
+
+            // Copy the application's bilingual identity + address fields verbatim.
+            $student = new Student($application->only([
+                'name_bn', 'name_en',
+                'father_name_bn', 'father_name_en', 'father_nid',
+                'mother_name_bn', 'mother_name_en', 'mother_nid',
+                'present_village', 'present_post_office', 'present_upazila', 'present_district',
+                'permanent_village_bn', 'permanent_post_office_bn', 'permanent_upazila_bn', 'permanent_district_bn',
+                'permanent_village_en', 'permanent_post_office_en', 'permanent_upazila_en', 'permanent_district_en',
+                'father_mobile', 'mother_mobile',
+                'birth_reg_no', 'date_of_birth', 'religion', 'nationality', 'caste',
+            ]));
+            $student->user_id = $studentUser->id;
+            $student->application_id = $application->id;
+            $student->admission_no = $admissionNo;
+            $student->status = StudentStatus::Active;
+            $student->admitted_at = now();
+            $student->branch_id = $branchId;
+            $student->save();
+
+            // Copy the applicant photo onto the student (single-file collection).
+            if (($photo = $application->getFirstMedia('photo')) !== null) {
+                $photo->copy($student, 'photo');
+            }
+
+            $enrollment = Enrollment::create([
+                'student_id' => $student->id,
+                'session_id' => $session->id,
+                'class_id' => $class->id,
+                'section_id' => $section->id,
+                'roll_no' => $data['roll_no'],
+                'status' => EnrollmentStatus::Active,
+            ]);
+
+            $parentCreated = false;
+
+            if ($createParent) {
+                $parentPassword = Str::password(10);
+                $parentUser = User::create([
+                    'branch_id' => $branchId,
+                    'name' => $parentName,
+                    'email' => null,
+                    'phone' => $parentPhone,
+                    'password' => Hash::make($parentPassword),
+                    'is_active' => true,
+                ]);
+                $parentUser->assignRole('parent');
+
+                $parent = new ParentProfile([
+                    'user_id' => $parentUser->id,
+                    'name' => $parentName,
+                    'phone' => $parentPhone,
+                    'relation' => $data['parent_relation'],
+                ]);
+                $parent->branch_id = $branchId;
+                $parent->save();
+
+                $parent->students()->attach($student->id);
+                $parentCreated = true;
+
+                SendCredentials::dispatch($parentUser, $parentPassword, 'Parent')->afterCommit();
+            }
+
+            $application->update([
+                'status' => AdmissionStatus::Approved,
+                'reviewed_by' => $reviewerId,
+                'reviewed_at' => now(),
+            ]);
+
+            SendCredentials::dispatch($studentUser, $studentPassword, 'Student')->afterCommit();
+
+            // Preload the relations the approval Resource reads, no lazy loads.
+            $enrollment->setRelation('session', $session);
+            $enrollment->setRelation('schoolClass', $class);
+            $enrollment->setRelation('section', $section);
+            $student->setRelation('enrollments', collect([$enrollment]));
+
+            return ['student' => $student, 'parent_created' => $parentCreated];
+        });
+    }
+
+    /**
+     * Reject an application, stamping the reason and reviewer. Re-review is
+     * blocked (409); a rejected application can therefore never be approved.
+     */
+    public function reject(AdmissionApplication $application, string $reason): AdmissionApplication
+    {
+        if ($application->status !== AdmissionStatus::Pending) {
+            abort(409, 'Application has already been reviewed.');
+        }
+
+        $application->update([
+            'status' => AdmissionStatus::Rejected,
+            'rejection_reason' => $reason,
+            'reviewed_by' => Auth::id(),
+            'reviewed_at' => now(),
+        ]);
+
+        return $application;
     }
 
     /**

@@ -40,9 +40,17 @@ class SendCredentials implements ShouldQueue
 
     /**
      * Execute the job: mail the credentials to the user's email.
+     *
+     * Students and parents (Task 3.5) authenticate by phone and carry no email
+     * address; their credentials are delivered out-of-band (SMS, out of scope),
+     * so there is nothing to email and the job is a no-op for them.
      */
     public function handle(): void
     {
+        if ($this->user->email === null) {
+            return;
+        }
+
         Mail::to($this->user->email)->send(new CredentialsMail(
             name: $this->user->name,
             role: $this->role,

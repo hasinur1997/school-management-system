@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\ApiController;
+use App\Http\Requests\Admission\ApproveAdmissionRequest;
 use App\Http\Requests\Admission\ListAdmissionsRequest;
+use App\Http\Requests\Admission\RejectAdmissionRequest;
 use App\Http\Resources\AdmissionDetailResource;
 use App\Http\Resources\AdmissionListResource;
+use App\Http\Resources\ApprovedStudentResource;
 use App\Models\AdmissionApplication;
 use App\Services\AdmissionService;
 use Illuminate\Http\JsonResponse;
@@ -49,5 +52,29 @@ class AdmissionController extends ApiController
         return $this->success(
             AdmissionDetailResource::make($this->admissions->loadDetail($admission)),
         );
+    }
+
+    /**
+     * Approve an application: create the student (login, enrollment, optional
+     * parent) in one transaction and mark the application approved.
+     */
+    public function approve(ApproveAdmissionRequest $request, AdmissionApplication $admission): JsonResponse
+    {
+        $result = $this->admissions->approve($admission, $request->validated());
+
+        return $this->success([
+            'student' => ApprovedStudentResource::make($result['student']),
+            'parent_created' => $result['parent_created'],
+        ], 'Admission approved. Student account created.');
+    }
+
+    /**
+     * Reject an application with a reason.
+     */
+    public function reject(RejectAdmissionRequest $request, AdmissionApplication $admission): JsonResponse
+    {
+        $this->admissions->reject($admission, $request->validated()['rejection_reason']);
+
+        return $this->success(null, 'Application rejected.');
     }
 }
