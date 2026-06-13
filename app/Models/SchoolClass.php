@@ -41,6 +41,14 @@ class SchoolClass extends Model
     }
 
     /**
+     * Get the subjects of the class.
+     */
+    public function subjects(): HasMany
+    {
+        return $this->hasMany(Subject::class, 'class_id');
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

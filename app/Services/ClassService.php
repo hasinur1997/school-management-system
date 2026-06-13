@@ -4,37 +4,23 @@ namespace App\Services;
 
 use App\Models\SchoolClass;
 use App\Models\Section;
+use App\Models\Subject;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\Cache;
 
 class ClassService
 {
+    public function __construct(private readonly AcademicStructureService $structure) {}
+
     /**
-     * List active classes with their sections, ordered by level, cached
-     * per branch (academic structure changes rarely but is read on every
-     * dropdown).
-     *
-     * Branch filtering is explicit here until the BranchScope global scope
-     * lands in Task 1.7. Super admins see every branch and may narrow to one.
+     * List active classes with their sections, ordered by level, served
+     * from the academic-structure cache.
      *
      * @return Collection<int, SchoolClass>
      */
     public function listClasses(User $user, ?int $branchId = null): Collection
     {
-        $branchId = $user->isSuperAdmin() ? $branchId : $user->branch_id;
-
-        return Cache::remember(
-            $this->listCacheKey($branchId),
-            now()->addHour(),
-            fn (): Collection => SchoolClass::query()
-                ->where('is_active', true)
-                ->when($branchId !== null, fn (Builder $query) => $query->where('branch_id', $branchId))
-                ->with(['sections' => fn ($query) => $query->orderBy('name')])
-                ->orderBy('numeric_level')
-                ->get(),
-        );
+        return $this->structure->listClasses($user, $branchId);
     }
 
     /**
@@ -72,6 +58,18 @@ class ClassService
     }
 
     /**
+     * Ensure a subject's parent class belongs to the caller's branch.
+     */
+    public function assertSubjectVisibleTo(Subject $subject, User $user): Subject
+    {
+        $subject->loadMissing('schoolClass');
+
+        $this->assertClassVisibleTo($subject->schoolClass, $user);
+
+        return $subject;
+    }
+
+    /**
      * Create a class in the given branch.
      *
      * @param  array<string, mixed>  $data
@@ -80,7 +78,7 @@ class ClassService
     {
         $class = SchoolClass::create([...$data, 'branch_id' => $branchId]);
 
-        $this->forgetListCache($class->branch_id);
+        $this->structure->forgetClassLists($class->branch_id);
 
         return $class;
     }
@@ -94,7 +92,7 @@ class ClassService
     {
         $class->update($data);
 
-        $this->forgetListCache($class->branch_id);
+        $this->structure->forgetClassLists($class->branch_id);
 
         return $class;
     }
@@ -106,7 +104,7 @@ class ClassService
     {
         $class->delete();
 
-        $this->forgetListCache($class->branch_id);
+        $this->structure->forgetClassLists($class->branch_id);
     }
 
     /**
@@ -118,7 +116,7 @@ class ClassService
     {
         $section = $class->sections()->create($data);
 
-        $this->forgetListCache($class->branch_id);
+        $this->structure->forgetClassLists($class->branch_id);
 
         return $section;
     }
@@ -132,7 +130,7 @@ class ClassService
     {
         $section->update($data);
 
-        $this->forgetListCache($section->loadMissing('schoolClass')->schoolClass->branch_id);
+        $this->structure->forgetClassLists($section->loadMissing('schoolClass')->schoolClass->branch_id);
 
         return $section;
     }
@@ -146,20 +144,6 @@ class ClassService
 
         $section->delete();
 
-        $this->forgetListCache($section->schoolClass->branch_id);
-    }
-
-    /**
-     * Drop the cached class list for the branch and the cross-branch list.
-     */
-    private function forgetListCache(int $branchId): void
-    {
-        Cache::forget($this->listCacheKey($branchId));
-        Cache::forget($this->listCacheKey(null));
-    }
-
-    private function listCacheKey(?int $branchId): string
-    {
-        return 'academic.classes.'.($branchId ?? 'all');
+        $this->structure->forgetClassLists($section->schoolClass->branch_id);
     }
 }

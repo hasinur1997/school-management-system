@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 1 — Foundation |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 1.5 |
 | Blocks | Marks entry (7.3), results (Phase 8) |
 | Spec references | `docs/api/academic-structure.md`, schema → `subjects`, `CLAUDE.md` → Caching |
@@ -30,8 +30,8 @@ Success — 201 subject object. Failures: duplicate name in class → 422; `pass
 ### DELETE /subjects/{id} — 409 once marks reference it.
 
 ## Success Criteria
-- [ ] CRUD + validation correct; reads cached and invalidated on write (prove with a test: write → subsequent read reflects change)
-- [ ] Tests green
+- [x] CRUD + validation correct; reads cached and invalidated on write (prove with a test: write → subsequent read reflects change)
+- [x] Tests green
 
 ## Required Tests
 1. create happy + duplicate 422 + pass>=full 422
