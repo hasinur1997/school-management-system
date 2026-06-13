@@ -2,18 +2,18 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToBranch;
 use Database\Factories\SchoolClassFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['branch_id', 'name', 'numeric_level', 'is_active'])]
 class SchoolClass extends Model
 {
     /** @use HasFactory<SchoolClassFactory> */
-    use HasFactory;
+    use BelongsToBranch, HasFactory;
 
     /**
      * The model's default values for attributes.
@@ -23,14 +23,6 @@ class SchoolClass extends Model
     protected $attributes = [
         'is_active' => true,
     ];
-
-    /**
-     * Get the branch the class belongs to.
-     */
-    public function branch(): BelongsTo
-    {
-        return $this->belongsTo(Branch::class);
-    }
 
     /**
      * Get the sections of the class.

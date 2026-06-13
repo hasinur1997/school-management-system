@@ -11,7 +11,6 @@ use App\Models\Section;
 use App\Services\ClassService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class SectionController extends ApiController
 {
@@ -20,10 +19,8 @@ class SectionController extends ApiController
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request, SchoolClass $class): JsonResponse
+    public function index(SchoolClass $class): JsonResponse
     {
-        $this->classes->assertClassVisibleTo($class, $request->user());
-
         return $this->success(SectionResource::collection($this->classes->listSections($class)));
     }
 
@@ -32,8 +29,6 @@ class SectionController extends ApiController
      */
     public function store(StoreSectionRequest $request, SchoolClass $class): JsonResponse
     {
-        $this->classes->assertClassVisibleTo($class, $request->user());
-
         $section = $this->classes->createSection($class, $request->validated());
 
         return $this->success(SectionResource::make($section), 'Section created', 201);
@@ -42,10 +37,8 @@ class SectionController extends ApiController
     /**
      * Display the specified resource.
      */
-    public function show(Request $request, Section $section): JsonResponse
+    public function show(Section $section): JsonResponse
     {
-        $this->classes->assertSectionVisibleTo($section, $request->user());
-
         return $this->success(SectionResource::make($section));
     }
 
@@ -54,8 +47,6 @@ class SectionController extends ApiController
      */
     public function update(UpdateSectionRequest $request, Section $section): JsonResponse
     {
-        $this->classes->assertSectionVisibleTo($section, $request->user());
-
         $section = $this->classes->updateSection($section, $request->validated());
 
         return $this->success(SectionResource::make($section), 'Section updated');
@@ -64,10 +55,8 @@ class SectionController extends ApiController
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Request $request, Section $section): JsonResponse
+    public function destroy(Section $section): JsonResponse
     {
-        $this->classes->assertSectionVisibleTo($section, $request->user());
-
         try {
             $this->classes->deleteSection($section);
         } catch (QueryException) {

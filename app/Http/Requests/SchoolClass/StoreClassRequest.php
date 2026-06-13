@@ -32,9 +32,11 @@ class StoreClassRequest extends FormRequest
                 'between:1,12',
                 Rule::unique('school_classes', 'numeric_level')->where('branch_id', $this->targetBranchId()),
             ],
+            // Non-super-admins cannot choose a branch: any submitted value
+            // is ignored and BelongsToBranch stamps their own (Task 1.7).
             'branch_id' => $this->user()->isSuperAdmin()
                 ? ['required', 'integer', Rule::exists('branches', 'id')]
-                : ['prohibited'],
+                : ['exclude'],
         ];
     }
 

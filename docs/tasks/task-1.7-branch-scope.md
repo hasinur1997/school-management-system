@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 1 — Foundation |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 1.5 |
 | Blocks | Every branch-scoped module (correctness depends on this) |
 | Spec references | `docs/architecture-context.md` → Branch Scoping Model, `CLAUDE.md` → rule 7 |
@@ -32,11 +32,11 @@ No new endpoints. Behavior change (example with classes):
 - Create as branch-1 admin ignores any submitted `branch_id` and stamps 1.
 
 ## Success Criteria
-- [ ] Cross-branch reads/writes impossible for non-super-admins (404, not 403)
-- [ ] `branch_id` in request bodies is ignored for non-super-admins
-- [ ] Super admin `branch_id` filter and `all` both work
-- [ ] Manual branch `where` clauses removed from earlier services
-- [ ] Tests green
+- [x] Cross-branch reads/writes impossible for non-super-admins (404, not 403)
+- [x] `branch_id` in request bodies is ignored for non-super-admins
+- [x] Super admin `branch_id` filter and `all` both work
+- [x] Manual branch `where` clauses removed from earlier services
+- [x] Tests green
 
 ## Required Tests
 1. branch-1 admin cannot list/show/update/delete branch-2 class (list excludes; show 404)

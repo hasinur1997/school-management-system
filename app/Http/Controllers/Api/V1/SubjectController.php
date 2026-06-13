@@ -9,25 +9,18 @@ use App\Http\Resources\SubjectResource;
 use App\Models\SchoolClass;
 use App\Models\Subject;
 use App\Services\AcademicStructureService;
-use App\Services\ClassService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class SubjectController extends ApiController
 {
-    public function __construct(
-        private readonly ClassService $classes,
-        private readonly AcademicStructureService $structure,
-    ) {}
+    public function __construct(private readonly AcademicStructureService $structure) {}
 
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request, SchoolClass $class): JsonResponse
+    public function index(SchoolClass $class): JsonResponse
     {
-        $this->classes->assertClassVisibleTo($class, $request->user());
-
         return $this->success(SubjectResource::collection($this->structure->listSubjects($class)));
     }
 
@@ -36,8 +29,6 @@ class SubjectController extends ApiController
      */
     public function store(StoreSubjectRequest $request, SchoolClass $class): JsonResponse
     {
-        $this->classes->assertClassVisibleTo($class, $request->user());
-
         $subject = $this->structure->createSubject($class, $request->validated());
 
         return $this->success(SubjectResource::make($subject), 'Subject created', 201);
@@ -46,10 +37,8 @@ class SubjectController extends ApiController
     /**
      * Display the specified resource.
      */
-    public function show(Request $request, Subject $subject): JsonResponse
+    public function show(Subject $subject): JsonResponse
     {
-        $this->classes->assertSubjectVisibleTo($subject, $request->user());
-
         return $this->success(SubjectResource::make($subject));
     }
 
@@ -58,8 +47,6 @@ class SubjectController extends ApiController
      */
     public function update(UpdateSubjectRequest $request, Subject $subject): JsonResponse
     {
-        $this->classes->assertSubjectVisibleTo($subject, $request->user());
-
         $subject = $this->structure->updateSubject($subject, $request->validated());
 
         return $this->success(SubjectResource::make($subject), 'Subject updated');
@@ -68,10 +55,8 @@ class SubjectController extends ApiController
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Request $request, Subject $subject): JsonResponse
+    public function destroy(Subject $subject): JsonResponse
     {
-        $this->classes->assertSubjectVisibleTo($subject, $request->user());
-
         try {
             $this->structure->deleteSubject($subject);
         } catch (QueryException) {

@@ -38,7 +38,8 @@ class UpdateClassRequest extends FormRequest
                     ->ignore($class),
             ],
             'is_active' => ['sometimes', 'boolean'],
-            'branch_id' => ['prohibited'],
+            // A class never changes branch; submitted values are ignored.
+            'branch_id' => ['exclude'],
         ];
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\ApiController;
+use App\Http\Requests\SchoolClass\ListClassesRequest;
 use App\Http\Requests\SchoolClass\StoreClassRequest;
 use App\Http\Requests\SchoolClass\UpdateClassRequest;
 use App\Http\Resources\ClassResource;
@@ -10,7 +11,6 @@ use App\Models\SchoolClass;
 use App\Services\ClassService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class ClassController extends ApiController
 {
@@ -19,12 +19,9 @@ class ClassController extends ApiController
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request): JsonResponse
+    public function index(ListClassesRequest $request): JsonResponse
     {
-        $classes = $this->classes->listClasses(
-            $request->user(),
-            $request->filled('branch_id') ? $request->integer('branch_id') : null,
-        );
+        $classes = $this->classes->listClasses($request->user(), $request->branchFilter());
 
         return $this->success(ClassResource::collection($classes));
     }
@@ -45,10 +42,8 @@ class ClassController extends ApiController
     /**
      * Display the specified resource.
      */
-    public function show(Request $request, SchoolClass $class): JsonResponse
+    public function show(SchoolClass $class): JsonResponse
     {
-        $this->classes->assertClassVisibleTo($class, $request->user());
-
         $class->load(['sections' => fn ($query) => $query->orderBy('name')]);
 
         return $this->success(ClassResource::make($class));
@@ -59,8 +54,6 @@ class ClassController extends ApiController
      */
     public function update(UpdateClassRequest $request, SchoolClass $class): JsonResponse
     {
-        $this->classes->assertClassVisibleTo($class, $request->user());
-
         $class = $this->classes->updateClass($class, $request->validated());
 
         return $this->success(ClassResource::make($class->load('sections')), 'Class updated');
@@ -69,10 +62,8 @@ class ClassController extends ApiController
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Request $request, SchoolClass $class): JsonResponse
+    public function destroy(SchoolClass $class): JsonResponse
     {
-        $this->classes->assertClassVisibleTo($class, $request->user());
-
         try {
             $this->classes->deleteClass($class);
         } catch (QueryException) {

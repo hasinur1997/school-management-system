@@ -273,10 +273,14 @@ class ClassSectionCrudTest extends TestCase
     {
         $other = Branch::factory()->create();
 
+        // Submitted branch_id is ignored for non-super-admins (Task 1.7):
+        // the class is stamped with the caller's own branch.
         $this->withToken($this->tokenForRole('admin'))
-            ->postJson('/api/v1/classes', ['name' => 'Class 5', 'numeric_level' => 5, 'branch_id' => $other->id])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['branch_id']);
+            ->postJson('/api/v1/classes', ['name' => 'Class 4', 'numeric_level' => 4, 'branch_id' => $other->id])
+            ->assertCreated()
+            ->assertJsonPath('data.branch_id', $this->branch->id);
+
+        $this->assertDatabaseMissing('school_classes', ['branch_id' => $other->id]);
 
         $superToken = $this->tokenForRole('super_admin');
 

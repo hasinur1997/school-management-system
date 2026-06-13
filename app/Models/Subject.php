@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToBranchThroughClass;
 use Database\Factories\SubjectFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Subject extends Model
 {
     /** @use HasFactory<SubjectFactory> */
-    use HasFactory;
+    use BelongsToBranchThroughClass, HasFactory;
 
     /**
      * The model's default values for attributes.

@@ -12,6 +12,7 @@ use Spatie\Permission\Exceptions\UnauthorizedException;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -67,7 +68,10 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
 
-        $exceptions->render(function (ModelNotFoundException $e, Request $request) {
+        // Model-not-found is prepared into NotFoundHttpException before the
+        // render callbacks run, so both are normalized here — the internal
+        // "No query results for model …" message must never leak.
+        $exceptions->render(function (NotFoundHttpException|ModelNotFoundException $e, Request $request) {
             if ($request->is('api/*')) {
                 return response()->json([
                     'success' => false,

@@ -21,21 +21,29 @@ class AcademicStructureService
      * List active classes with their sections, ordered by level, cached
      * per branch.
      *
-     * Branch filtering is explicit here until the BranchScope global scope
-     * lands in Task 1.7. Super admins see every branch and may narrow to one.
+     * Super admin filtering convention: BranchScope does not constrain
+     * super admins, so they pass an explicit `branch_id` to narrow to one
+     * branch; null (`all` or an omitted filter) returns every branch.
+     * Everyone else is constrained by BranchScope and the filter is ignored.
      *
      * @return Collection<int, SchoolClass>
      */
     public function listClasses(User $user, ?int $branchId = null): Collection
     {
-        $branchId = $user->isSuperAdmin() ? $branchId : $user->branch_id;
+        // A branchless non-super-admin sees nothing; skip the cache so the
+        // empty result can never land under the cross-branch "all" key.
+        if (! $user->isSuperAdmin() && $user->branch_id === null) {
+            return new Collection;
+        }
+
+        $filter = $user->isSuperAdmin() ? $branchId : null;
 
         return Cache::remember(
-            $this->classListKey($branchId),
+            $this->classListKey($user->isSuperAdmin() ? $filter : $user->branch_id),
             now()->addHour(),
             fn (): Collection => SchoolClass::query()
                 ->where('is_active', true)
-                ->when($branchId !== null, fn (Builder $query) => $query->where('branch_id', $branchId))
+                ->when($filter !== null, fn (Builder $query) => $query->where('branch_id', $filter))
                 ->with(['sections' => fn ($query) => $query->orderBy('name')])
                 ->orderBy('numeric_level')
                 ->get(),
