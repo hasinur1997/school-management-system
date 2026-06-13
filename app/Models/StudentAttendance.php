@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AttendanceStatus;
+use App\Models\Concerns\BelongsToBranchThroughEnrollment;
 use Database\Factories\StudentAttendanceFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,14 +12,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * A single student's attendance mark for one date, tied to an enrollment. The
- * branch derives through the enrollment's student (no local branch_id). Unique
- * per (enrollment_id, date), so re-taking a day's attendance updates the row.
+ * branch derives through the enrollment's student (no local branch_id), so
+ * isolation comes from BelongsToBranchThroughEnrollment. Unique per
+ * (enrollment_id, date), so re-taking a day's attendance updates the row.
  */
 #[Fillable(['enrollment_id', 'date', 'status', 'recorded_by'])]
 class StudentAttendance extends Model
 {
     /** @use HasFactory<StudentAttendanceFactory> */
-    use HasFactory;
+    use BelongsToBranchThroughEnrollment, HasFactory;
 
     /**
      * Get the attributes that should be cast.

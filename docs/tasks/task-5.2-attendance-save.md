@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 5 — Student Attendance |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 5.1 |
 | Blocks | 5.3 |
 | Spec references | `docs/api/student-attendance.md` |

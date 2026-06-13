@@ -161,6 +161,15 @@ Route::prefix('v1')->name('v1.')->group(function () {
 
     Route::middleware(['auth:sanctum', 'permission:attendance.create'])->group(function () {
         Route::get('attendance/sheet', [AttendanceController::class, 'sheet'])->name('attendance.sheet');
+        Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
+    });
+
+    Route::middleware(['auth:sanctum', 'permission:attendance.view'])->group(function () {
+        Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
+    });
+
+    Route::middleware(['auth:sanctum', 'permission:attendance.update'])->group(function () {
+        Route::put('attendance/{attendance}', [AttendanceController::class, 'update'])->name('attendance.update');
     });
 
     Route::middleware(['auth:sanctum', 'permission:branch.manage'])->group(function () {
