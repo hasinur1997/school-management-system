@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 2 — Teacher Management |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 2.2 |
 | Blocks | Phase 3 start |
 | Spec references | `docs/api/teachers.md` |

@@ -55,6 +55,11 @@ class TeacherAssignment extends Model
         return $this->belongsTo(Subject::class, 'subject_id');
     }
 
-    // The teacher() relation and its eager-loaded nested name land in Task 2.1
-    // when the teachers table exists.
+    /**
+     * Get the teacher this assignment belongs to. The FK landed in Task 2.1.
+     */
+    public function teacher(): BelongsTo
+    {
+        return $this->belongsTo(Teacher::class);
+    }
 }

@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 2 — Teacher Management |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 2.1 |
 | Blocks | 3.5 (reuses this job for students/parents) |
 | Spec references | `docs/api/teachers.md`, `docs/architecture-context.md` → Background Work |

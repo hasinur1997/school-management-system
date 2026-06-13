@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 2 — Teacher Management |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 1.7 |
 | Blocks | 2.2, 2.3, 1.8 FK, teacher attendance (Phase 6) |
 | Spec references | `docs/api/teachers.md`, schema → `teachers` |

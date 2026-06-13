@@ -7,6 +7,7 @@ use App\Models\Branch;
 use App\Models\SchoolClass;
 use App\Models\Section;
 use App\Models\Subject;
+use App\Models\Teacher;
 use App\Models\TeacherAssignment;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
@@ -42,6 +43,11 @@ class TeacherAssignmentCrudTest extends TestCase
         $this->class = SchoolClass::factory()->create(['branch_id' => $this->branch->id]);
         $this->section = Section::factory()->create(['class_id' => $this->class->id]);
         $this->subject = Subject::factory()->create(['class_id' => $this->class->id]);
+
+        // teacher_assignments.teacher_id became a real FK in Task 2.1, so the
+        // ids these tests reference (4, 7) must point at existing teachers.
+        Teacher::factory()->create(['id' => 4, 'branch_id' => $this->branch->id]);
+        Teacher::factory()->create(['id' => 7, 'branch_id' => $this->branch->id]);
     }
 
     /**
