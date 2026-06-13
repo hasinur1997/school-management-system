@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 4 — Students & Parents |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 4.1 |
 | Blocks | — |
 | Spec references | `docs/api/students.md`, schema → `enrollments` |
@@ -28,7 +28,7 @@ Enrollments were created in 3.2/3.5. This exposes a student's class history (the
 Failures: student viewing someone else → 404; parent of the student → 200; unrelated parent → 404.
 
 ## Success Criteria
-- [ ] Ordered newest-first; policy semantics (self/linked-parent/staff) correct; no N+1; tests green
+- [x] Ordered newest-first; policy semantics (self/linked-parent/staff) correct; no N+1; tests green
 
 ## Required Tests
 1. staff view 200 ordered; 2. self 200; 3. unrelated student/parent 404; 4. linked parent 200

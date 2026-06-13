@@ -3,9 +3,11 @@
 namespace App\Services;
 
 use App\Enums\StudentStatus;
+use App\Models\Enrollment;
 use App\Models\Student;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\UploadedFile;
 
 class StudentService
@@ -61,6 +63,20 @@ class StudentService
                 ->latest('id')
                 ->with(['session', 'schoolClass', 'section']),
         ]);
+    }
+
+    /**
+     * A student's class history, newest first, each row carrying its session,
+     * class and section (eager loaded so the resource never lazy loads).
+     *
+     * @return Collection<int, Enrollment>
+     */
+    public function enrollmentHistory(Student $student): Collection
+    {
+        return $student->enrollments()
+            ->with(['session', 'schoolClass', 'section'])
+            ->latest('id')
+            ->get();
     }
 
     /**

@@ -8,6 +8,7 @@ use App\Http\Requests\Student\ListStudentsRequest;
 use App\Http\Requests\Student\UpdateStudentRequest;
 use App\Http\Requests\Student\UpdateStudentStatusRequest;
 use App\Http\Requests\Student\UploadStudentPhotoRequest;
+use App\Http\Resources\EnrollmentResource;
 use App\Http\Resources\StudentListResource;
 use App\Http\Resources\StudentResource;
 use App\Models\Student;
@@ -55,6 +56,23 @@ class StudentController extends ApiController
         }
 
         return $this->success(StudentResource::make($this->students->loadProfile($student)));
+    }
+
+    /**
+     * List a student's class history (enrollments), newest first.
+     *
+     * Authorized by the same StudentPolicy::view rule as the profile, with the
+     * same 404-not-403 hiding so a student/parent can never probe others.
+     */
+    public function enrollments(Request $request, Student $student): JsonResponse
+    {
+        if ($request->user()->cannot('view', $student)) {
+            abort(404);
+        }
+
+        return $this->success(
+            EnrollmentResource::collection($this->students->enrollmentHistory($student))
+        );
     }
 
     /**

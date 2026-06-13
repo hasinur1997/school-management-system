@@ -110,6 +110,10 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::get('students/{student}', [StudentController::class, 'show'])
             ->name('students.show');
 
+        // enrollments authorizes via StudentPolicy::view — staff, the student, or a linked parent.
+        Route::get('students/{student}/enrollments', [StudentController::class, 'enrollments'])
+            ->name('students.enrollments');
+
         Route::put('students/{student}', [StudentController::class, 'update'])
             ->middleware('permission:student.update')
             ->name('students.update');
