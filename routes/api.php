@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AdmissionController;
+use App\Http\Controllers\Api\V1\AttendanceController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BranchController;
 use App\Http\Controllers\Api\V1\ClassController;
@@ -156,6 +157,10 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::get('teacher-assignments/{teacherAssignment}', [TeacherAssignmentController::class, 'show'])->name('teacher-assignments.show');
         Route::put('teacher-assignments/{teacherAssignment}', [TeacherAssignmentController::class, 'update'])->name('teacher-assignments.update');
         Route::delete('teacher-assignments/{teacherAssignment}', [TeacherAssignmentController::class, 'destroy'])->name('teacher-assignments.destroy');
+    });
+
+    Route::middleware(['auth:sanctum', 'permission:attendance.create'])->group(function () {
+        Route::get('attendance/sheet', [AttendanceController::class, 'sheet'])->name('attendance.sheet');
     });
 
     Route::middleware(['auth:sanctum', 'permission:branch.manage'])->group(function () {

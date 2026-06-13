@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 5 — Student Attendance |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 4.3 |
 | Blocks | 5.2, 5.3 |
 | Spec references | `docs/api/student-attendance.md`, schema → `student_attendances` |
@@ -31,8 +31,8 @@ Teachers take attendance against a roster. The sheet endpoint returns that roste
 `status: null` = not yet taken. Failures: missing class/section → 422; section not in class → 422; TC/inactive enrollments excluded from roster.
 
 ## Success Criteria
-- [ ] Roster ordered by roll, joined statuses correct, TC/inactive excluded, single query set (no N+1)
-- [ ] Tests green
+- [x] Roster ordered by roll, joined statuses correct, TC/inactive excluded, single query set (no N+1)
+- [x] Tests green
 
 ## Required Tests
 1. sheet with no records → all null; with partial records → mixed
