@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 3 — Admissions |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 3.1 |
 | Blocks | 3.5 (approval writes these), all of Phase 4+ |
 | Spec references | schema → `students`, `parents`, `parent_student`, `enrollments` |

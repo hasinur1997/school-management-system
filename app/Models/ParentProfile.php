@@ -1,0 +1,47 @@
+<?php
+
+namespace App\Models;
+
+use App\Models\Concerns\BelongsToBranch;
+use Database\Factories\ParentProfileFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+
+/**
+ * A parent/guardian profile attached one-to-one to a login (users row) and
+ * linked many-to-many to students via parent_student. Named ParentProfile to
+ * avoid clashing with the PHP `parent` keyword; the underlying table is
+ * `parents`. Branch is stamped automatically via BelongsToBranch.
+ */
+#[Fillable(['user_id', 'name', 'phone', 'relation'])]
+class ParentProfile extends Model
+{
+    /** @use HasFactory<ParentProfileFactory> */
+    use BelongsToBranch, HasFactory;
+
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'parents';
+
+    /**
+     * Get the login the parent authenticates with.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the students linked to this parent.
+     */
+    public function students(): BelongsToMany
+    {
+        return $this->belongsToMany(Student::class, 'parent_student', 'parent_id', 'student_id');
+    }
+}
