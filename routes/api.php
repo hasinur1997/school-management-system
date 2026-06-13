@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AdmissionController;
 use App\Http\Controllers\Api\V1\AttendanceController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BranchController;
+use App\Http\Controllers\Api\V1\CheckinIpController;
 use App\Http\Controllers\Api\V1\ClassController;
 use App\Http\Controllers\Api\V1\ParentController;
 use App\Http\Controllers\Api\V1\PublicAdmissionController;
@@ -178,6 +179,15 @@ Route::prefix('v1')->name('v1.')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('students/{student}/attendance', [AttendanceController::class, 'studentMonthly'])->name('students.attendance');
         Route::get('me/attendance', [AttendanceController::class, 'meMonthly'])->name('me.attendance');
+    });
+
+    // Teacher check-in IP whitelist management. Entries are branch-scoped via
+    // BranchScope, so out-of-branch {checkinIp} bindings 404 automatically.
+    Route::middleware(['auth:sanctum', 'permission:teacher_attendance.manage'])->group(function () {
+        Route::get('checkin-ips', [CheckinIpController::class, 'index'])->name('checkin-ips.index');
+        Route::post('checkin-ips', [CheckinIpController::class, 'store'])->name('checkin-ips.store');
+        Route::put('checkin-ips/{checkinIp}', [CheckinIpController::class, 'update'])->name('checkin-ips.update');
+        Route::delete('checkin-ips/{checkinIp}', [CheckinIpController::class, 'destroy'])->name('checkin-ips.destroy');
     });
 
     Route::middleware(['auth:sanctum', 'permission:branch.manage'])->group(function () {

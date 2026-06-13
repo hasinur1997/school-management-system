@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 6 — Teacher Attendance |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 5.3 |
 | Blocks | 6.2, 6.3 |
 | Spec references | `docs/api/teacher-attendance.md`, schema → `teacher_attendances`, `checkin_ip_whitelists` |
