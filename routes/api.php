@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AdmissionController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BranchController;
 use App\Http\Controllers\Api\V1\ClassController;
+use App\Http\Controllers\Api\V1\ParentController;
 use App\Http\Controllers\Api\V1\PublicAdmissionController;
 use App\Http\Controllers\Api\V1\SectionController;
 use App\Http\Controllers\Api\V1\SessionController;
@@ -120,6 +121,19 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::post('students/{student}/photo', [StudentController::class, 'photo'])
             ->middleware('permission:student.update')
             ->name('students.photo');
+    });
+
+    Route::middleware(['auth:sanctum', 'permission:parent.manage'])->group(function () {
+        Route::get('parents', [ParentController::class, 'index'])->name('parents.index');
+        Route::post('parents', [ParentController::class, 'store'])->name('parents.store');
+        Route::post('parents/{parent}/students', [ParentController::class, 'linkStudent'])->name('parents.students.link');
+        Route::delete('parents/{parent}/students/{student}', [ParentController::class, 'unlinkStudent'])->name('parents.students.unlink');
+    });
+
+    // Parent self-service: linked children. Role-gated in the controller
+    // (parents hold no staff permissions).
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('me/students', [ParentController::class, 'meStudents'])->name('me.students');
     });
 
     Route::middleware(['auth:sanctum', 'permission:admission.view'])->group(function () {

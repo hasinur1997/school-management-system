@@ -44,4 +44,15 @@ class ParentProfile extends Model
     {
         return $this->belongsToMany(Student::class, 'parent_student', 'parent_id', 'student_id');
     }
+
+    /**
+     * Whether the given student is linked to this parent. The project-wide
+     * gate every "parent sees own children" endpoint (attendance/results/fees)
+     * reuses. The students relation carries BranchScope, so a cross-branch
+     * student id is never reported as linked.
+     */
+    public function isLinkedTo(int $studentId): bool
+    {
+        return $this->students()->whereKey($studentId)->exists();
+    }
 }
