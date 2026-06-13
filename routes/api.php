@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\SessionController;
 use App\Http\Controllers\Api\V1\StudentController;
 use App\Http\Controllers\Api\V1\SubjectController;
 use App\Http\Controllers\Api\V1\TeacherAssignmentController;
+use App\Http\Controllers\Api\V1\TeacherAttendanceController;
 use App\Http\Controllers\Api\V1\TeacherController;
 use Illuminate\Support\Facades\Route;
 
@@ -179,6 +180,13 @@ Route::prefix('v1')->name('v1.')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('students/{student}/attendance', [AttendanceController::class, 'studentMonthly'])->name('students.attendance');
         Route::get('me/attendance', [AttendanceController::class, 'meMonthly'])->name('me.attendance');
+    });
+
+    // Teacher self check-in / check-out. Teacher role only; the request IP is
+    // matched against the branch whitelist in the service.
+    Route::middleware(['auth:sanctum', 'role:teacher'])->group(function () {
+        Route::post('teacher-attendance/check-in', [TeacherAttendanceController::class, 'checkIn'])->name('teacher-attendance.check-in');
+        Route::post('teacher-attendance/check-out', [TeacherAttendanceController::class, 'checkOut'])->name('teacher-attendance.check-out');
     });
 
     // Teacher check-in IP whitelist management. Entries are branch-scoped via
