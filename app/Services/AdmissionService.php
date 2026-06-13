@@ -2,7 +2,10 @@
 
 namespace App\Services;
 
+use App\Enums\AdmissionStatus;
 use App\Models\AdmissionApplication;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 
@@ -60,6 +63,48 @@ class AdmissionService
 
             return $application;
         });
+    }
+
+    /**
+     * List admission applications in the caller's branch (branch isolation is
+     * automatic via BranchScope). Defaults to pending; supports filtering by
+     * desired class and a created-date range, plus a free-text search across
+     * the applicant/father identifiers. The desired class is eager loaded for
+     * the compact rows so it never lazy loads in the Resource.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    public function list(array $filters, int $perPage): LengthAwarePaginator
+    {
+        $status = $filters['status'] ?? AdmissionStatus::Pending->value;
+
+        return AdmissionApplication::query()
+            ->with('desiredClass')
+            ->where('status', $status)
+            ->when(isset($filters['desired_class_id']), fn (Builder $query) => $query->where('desired_class_id', $filters['desired_class_id']))
+            ->when(isset($filters['from']), fn (Builder $query) => $query->whereDate('created_at', '>=', $filters['from']))
+            ->when(isset($filters['to']), fn (Builder $query) => $query->whereDate('created_at', '<=', $filters['to']))
+            ->when(isset($filters['search']), function (Builder $query) use ($filters): void {
+                $term = '%'.$filters['search'].'%';
+                $query->where(fn (Builder $q) => $q
+                    ->where('name_en', 'like', $term)
+                    ->orWhere('name_bn', 'like', $term)
+                    ->orWhere('application_no', 'like', $term)
+                    ->orWhere('father_mobile', 'like', $term)
+                    ->orWhere('birth_reg_no', 'like', $term));
+            })
+            ->orderByDesc('created_at')
+            ->paginate($perPage);
+    }
+
+    /**
+     * Eager load everything the detail Resource touches: the desired class, the
+     * previous-education child rows, the reviewer, and the media (photo +
+     * documents).
+     */
+    public function loadDetail(AdmissionApplication $application): AdmissionApplication
+    {
+        return $application->load(['desiredClass', 'previousEducations', 'reviewer', 'media']);
     }
 
     /**

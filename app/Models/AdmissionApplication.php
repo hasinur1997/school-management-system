@@ -73,6 +73,14 @@ class AdmissionApplication extends Model implements HasMedia
     }
 
     /**
+     * The public URL of the applicant photo, or null when none is set.
+     */
+    public function photoUrl(): ?string
+    {
+        return $this->getFirstMediaUrl('photo') ?: null;
+    }
+
+    /**
      * Get the class the applicant is applying to.
      */
     public function desiredClass(): BelongsTo

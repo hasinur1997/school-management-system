@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 3 — Admissions |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 3.3 |
 | Blocks | 3.5 |
 | Spec references | `docs/api/admissions.md` |
@@ -24,9 +24,9 @@ Row: `{ "id":7, "application_no":"APP-JA-00042", "name_en":"Karim Hossain", "des
 Failures: out-of-branch/unknown id → 404 · no permission → 403.
 
 ## Success Criteria
-- [ ] Default pending view; all filters + search work; no N+1
-- [ ] Detail exposes media URLs and child rows
-- [ ] Branch isolation (404 cross-branch)
+- [x] Default pending view; all filters + search work; no N+1
+- [x] Detail exposes media URLs and child rows
+- [x] Branch isolation (404 cross-branch)
 
 ## Required Tests
 1. default status filter  2. each filter + search  3. detail completeness  4. cross-branch 404  5. N+1 guard

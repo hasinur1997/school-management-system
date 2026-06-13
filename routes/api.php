@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AdmissionController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BranchController;
 use App\Http\Controllers\Api\V1\ClassController;
@@ -96,6 +97,11 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::post('teachers/{teacher}/resend-credentials', [TeacherController::class, 'resendCredentials'])
             ->middleware('permission:teacher.create')
             ->name('teachers.resend-credentials');
+    });
+
+    Route::middleware(['auth:sanctum', 'permission:admission.view'])->group(function () {
+        Route::get('admissions', [AdmissionController::class, 'index'])->name('admissions.index');
+        Route::get('admissions/{admission}', [AdmissionController::class, 'show'])->name('admissions.show');
     });
 
     Route::middleware(['auth:sanctum', 'permission:teacher.update'])->group(function () {
