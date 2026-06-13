@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BranchController;
 use App\Http\Controllers\Api\V1\ClassController;
+use App\Http\Controllers\Api\V1\PublicAdmissionController;
 use App\Http\Controllers\Api\V1\SectionController;
 use App\Http\Controllers\Api\V1\SessionController;
 use App\Http\Controllers\Api\V1\SubjectController;
@@ -11,6 +12,17 @@ use App\Http\Controllers\Api\V1\TeacherController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('v1.')->group(function () {
+    // Public, unauthenticated surface. Submission is rate-limited to
+    // 10 requests/hour/IP; both endpoints handle branches explicitly.
+    Route::prefix('public')->name('public.')->group(function () {
+        Route::post('admissions', [PublicAdmissionController::class, 'store'])
+            ->middleware('throttle:10,60')
+            ->name('admissions.store');
+
+        Route::get('admissions/{application_no}/status', [PublicAdmissionController::class, 'status'])
+            ->name('admissions.status');
+    });
+
     Route::prefix('auth')->name('auth.')->group(function () {
         Route::post('login', [AuthController::class, 'login'])
             ->middleware('throttle:5,1')

@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 3 — Admissions |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 3.1 |
 | Blocks | 3.4 |
 | Spec references | `docs/api/admissions.md` |
@@ -31,9 +31,9 @@ Failures: validation → 422 per-field · duplicate birth_reg_no → 422 `errors
 200: `{ "data": { "application_no":"APP-JA-00042", "status":"pending|approved|rejected", "rejection_reason": "...|null" } }` · no/mismatched dob → 404 (do not reveal existence).
 
 ## Success Criteria
-- [ ] Anonymous submission with photo + docs + previous educations persists atomically
-- [ ] Rate limit, dup birth_reg_no, inactive-branch guards
-- [ ] Status check requires matching dob; mismatch → 404
+- [x] Anonymous submission with photo + docs + previous educations persists atomically
+- [x] Rate limit, dup birth_reg_no, inactive-branch guards
+- [x] Status check requires matching dob; mismatch → 404
 
 ## Required Tests
 1. full happy path incl. media + 2 previous educations  2. each guard (422/429 cases)  3. status check match / mismatch 404  4. transaction rollback on media failure
