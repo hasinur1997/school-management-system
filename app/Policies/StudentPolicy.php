@@ -31,4 +31,20 @@ class StudentPolicy
             ->first()
             ?->isLinkedTo($student->id) ?? false;
     }
+
+    /**
+     * A user may view a student's attendance if they hold attendance.view, if
+     * they are that student, or if they are a parent linked to that student.
+     * (Super admins bypass via Gate::before.)
+     */
+    public function viewAttendance(User $user, Student $student): bool
+    {
+        if ($user->can('attendance.view') || $user->id === $student->user_id) {
+            return true;
+        }
+
+        return ParentProfile::where('user_id', $user->id)
+            ->first()
+            ?->isLinkedTo($student->id) ?? false;
+    }
 }

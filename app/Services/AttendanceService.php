@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Enums\AttendanceStatus;
 use App\Enums\EnrollmentStatus;
 use App\Models\Enrollment;
 use App\Models\Section;
+use App\Models\Student;
 use App\Models\StudentAttendance;
 use App\Models\Teacher;
 use App\Models\TeacherAssignment;
@@ -104,6 +106,58 @@ class AttendanceService
         $attendance->update(['status' => $status]);
 
         return $attendance->load('enrollment.student');
+    }
+
+    /**
+     * Build a student's monthly attendance view: a SQL-aggregated summary of
+     * the status counts (plus working_days = total recorded days) and the
+     * ordered day-by-day list, both scoped to the student's own enrollments and
+     * the given month/year. The summary is one aggregate query — never a PHP
+     * loop over rows — per the reporting rules.
+     *
+     * @return array{month: int, year: int, summary: array{present: int, absent: int, late: int, leave: int, working_days: int}, days: Collection<int, StudentAttendance>}
+     */
+    public function monthlySheet(Student $student, int $month, int $year): array
+    {
+        $enrollmentIds = $student->enrollments()->pluck('id');
+
+        $base = fn (): Builder => StudentAttendance::query()
+            ->whereIn('enrollment_id', $enrollmentIds)
+            ->whereYear('date', $year)
+            ->whereMonth('date', $month);
+
+        $aggregate = $base()
+            ->selectRaw(
+                'COUNT(*) as working_days,'
+                .' SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as present,'
+                .' SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as absent,'
+                .' SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as late,'
+                .' SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as leave_count',
+                [
+                    AttendanceStatus::Present->value,
+                    AttendanceStatus::Absent->value,
+                    AttendanceStatus::Late->value,
+                    AttendanceStatus::Leave->value,
+                ],
+            )
+            ->first();
+
+        $days = $base()
+            ->orderBy('date')
+            ->get(['date', 'status']);
+
+        return [
+            'month' => $month,
+            'year' => $year,
+            'summary' => [
+                'present' => (int) $aggregate->present,
+                'absent' => (int) $aggregate->absent,
+                'late' => (int) $aggregate->late,
+                'leave' => (int) $aggregate->leave_count,
+                'working_days' => (int) $aggregate->working_days,
+            ],
+            'days' => $days,
+        ];
     }
 
     /**

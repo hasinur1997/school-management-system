@@ -172,6 +172,14 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::put('attendance/{attendance}', [AttendanceController::class, 'update'])->name('attendance.update');
     });
 
+    // Monthly attendance reads. studentMonthly authorizes via
+    // StudentPolicy::viewAttendance in the controller (staff/self/linked
+    // parent, 404 hiding); meMonthly is role-gated to the student itself.
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('students/{student}/attendance', [AttendanceController::class, 'studentMonthly'])->name('students.attendance');
+        Route::get('me/attendance', [AttendanceController::class, 'meMonthly'])->name('me.attendance');
+    });
+
     Route::middleware(['auth:sanctum', 'permission:branch.manage'])->group(function () {
         Route::get('branches', [BranchController::class, 'index'])->name('branches.index');
         Route::post('branches', [BranchController::class, 'store'])->name('branches.store');

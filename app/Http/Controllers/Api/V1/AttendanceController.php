@@ -5,10 +5,13 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Api\ApiController;
 use App\Http\Requests\Attendance\AttendanceSheetRequest;
 use App\Http\Requests\Attendance\ListAttendanceRequest;
+use App\Http\Requests\Attendance\MonthlyAttendanceRequest;
 use App\Http\Requests\Attendance\StoreAttendanceRequest;
 use App\Http\Requests\Attendance\UpdateAttendanceRequest;
 use App\Http\Resources\AttendanceResource;
 use App\Http\Resources\AttendanceSheetResource;
+use App\Http\Resources\MonthlyAttendanceResource;
+use App\Models\Student;
 use App\Models\StudentAttendance;
 use App\Services\AttendanceService;
 use Illuminate\Http\JsonResponse;
@@ -69,6 +72,49 @@ class AttendanceController extends ApiController
         );
 
         return $this->success(['saved' => $saved]);
+    }
+
+    /**
+     * Return a student's monthly attendance sheet (summary + day list).
+     *
+     * Authorized by StudentPolicy::viewAttendance — staff with attendance.view,
+     * the student itself, or a linked parent. A denial hides existence (404)
+     * rather than leaking it via 403, like the student profile reads.
+     */
+    public function studentMonthly(MonthlyAttendanceRequest $request, Student $student): JsonResponse
+    {
+        if ($request->user()->cannot('viewAttendance', $student)) {
+            abort(404);
+        }
+
+        return $this->monthly($student, $request->month(), $request->year());
+    }
+
+    /**
+     * Return the authenticated student's own monthly attendance sheet. The
+     * endpoint is intrinsically the student role: a non-student (no student
+     * profile) gets 403.
+     */
+    public function meMonthly(MonthlyAttendanceRequest $request): JsonResponse
+    {
+        $student = Student::where('user_id', $request->user()->id)->first();
+
+        if ($student === null) {
+            abort(403);
+        }
+
+        return $this->monthly($student, $request->month(), $request->year());
+    }
+
+    /**
+     * Shared monthly-sheet response builder for the staff/self/parent and the
+     * student-self endpoints.
+     */
+    private function monthly(Student $student, int $month, int $year): JsonResponse
+    {
+        $sheet = $this->attendance->monthlySheet($student, $month, $year);
+
+        return $this->success(MonthlyAttendanceResource::make($sheet));
     }
 
     /**
