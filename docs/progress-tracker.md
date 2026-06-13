@@ -2,7 +2,7 @@
 
 > The unit of work is one task below. **Every task has a full ticket file in `docs/tasks/` — read the ticket before implementing; the line here is only a pointer.** One task = one sitting: implementable and verifiable (`php artisan test` green) in a single session. Claude Code marks `[x]` only when the task's code AND tests are complete. Never start a task before all tasks above it in the same phase are done; never start a phase before the previous phase is done.
 
-## Phase 1 — Foundation `[ ]`
+## Phase 1 — Foundation `[x]`
 Specs: `api/auth.md`, `api/academic-structure.md`
 
 - [x] [1.1](tasks/task-1.1-authentication.md) — Sanctum setup
@@ -12,7 +12,7 @@ Specs: `api/auth.md`, `api/academic-structure.md`
 - [x] [1.5](tasks/task-1.5-classes-sections.md) — `school_classes` + `sections` migrations + CRUD
 - [x] [1.6](tasks/task-1.6-subjects.md) — `subjects` migration + CRUD
 - [x] [1.7](tasks/task-1.7-branch-scope.md) — `BranchScope` global scope + `BelongsToBranch` trait (auto-stamp branch_id on create)
-- [ ] [1.8](tasks/task-1.8-teacher-assignments.md) — `teacher_assignments` migration + CRUD + filters
+- [x] [1.8](tasks/task-1.8-teacher-assignments.md) — `teacher_assignments` migration + CRUD + filters
 
 ## Phase 2 — Teacher Management `[ ]`
 Specs: `api/teachers.md`
@@ -151,4 +151,7 @@ Specs: `api/settings.md`
 - 2026-06-13 — Task 1.7: `sections`/`subjects` carry no `branch_id` of their own, so the `BelongsToBranch` trait can't apply; isolation comes from a sibling `App\Models\Concerns\BelongsToBranchThroughClass` trait whose global scope adds `whereHas('schoolClass')` (the relation query carries `BranchScope`), making out-of-branch rows model-not-found at route binding. The 1.5/1.6 `assert*VisibleTo` helpers are removed from `ClassService` and controllers.
 - 2026-06-13 — Task 1.7: scope-based binding 404s surfaced a latent envelope bug — Laravel prepares `ModelNotFoundException` into `NotFoundHttpException` **before** render closures run, so 1.1's `ModelNotFoundException` closure never matched and "No query results for model …" leaked through the generic `HttpExceptionInterface` closure. The closure now matches `NotFoundHttpException|ModelNotFoundException` and always returns the `Resource not found.` envelope.
 - 2026-06-13 — Task 1.7: super admin list filter formalized in `ListClassesRequest` (`branch_id` = existing id, or `all`/omitted for every branch; invalid id → 422); the explicit `where('branch_id', …)` for that filter in `AcademicStructureService::listClasses` is the one sanctioned manual branch clause (documented in code). A branchless non-super-admin now gets an **uncached** empty list — caching it would land under the cross-branch `all` cache key (`classListKey(null)`).
+- 2026-06-13 — Task 1.8: `teacher_assignments` created with an unconstrained `teacher_id` (no FK — teachers arrives in 2.1, which **must** add `foreign('teacher_id')->references('id')->on('teachers')`); `session_id`/`class_id`/`section_id`/`subject_id` are restrict FKs. DB `unique(teacher_id, session_id, class_id, section_id, subject_id)` defends only the fully-populated tuple — SQL treats NULLs as distinct, so duplicates with NULL `section_id`/`subject_id` (class duties) are caught by `TeacherAssignmentRequest` validation instead.
+- 2026-06-13 — Task 1.8: model carries no `branch_id`; branch isolation reuses `BelongsToBranchThroughClass` via its `schoolClass()` relation (same pattern as sections/subjects). Body-supplied `class_id`/`section_id`/`subject_id` are resolved through their (branch-scoped) models in the Form Request `after()` hook, so out-of-branch ids report 422 `errors.class_id` rather than leaking other branches' rows; `session_id` uses a plain `exists` rule (sessions are global, no branch_id). Duplicate-tuple violations attach to `errors.teacher_id`.
+- 2026-06-13 — Task 1.8: per ticket decision, all five CRUD endpoints are guarded by `permission:teacher.update` (no separate read permission — assignments are admin-managed). The `teacher()` relation + nested teacher name in `TeacherAssignmentResource` are deferred to 2.1; today the resource nests class/session/section/subject names (all eager loaded — N+1 guard test runs under `Model::shouldBeStrict()`).
 - 2026-06-13 — Task 1.6: subject delete-in-use 409 depends on the future `marks` table — **Task 7.3 must declare a restrict FK to `subjects`**; tested via a synthetic restrict-FK table, mirroring 1.4/1.5. Class delete with subjects already 409s for real via the `subjects.class_id` restrict FK (asserted at DB level in the test).

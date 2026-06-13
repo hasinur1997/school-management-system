@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 1 — Foundation |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 1.7 (and structurally on teachers existing — see note) |
 | Blocks | Attendance permission checks (5.2), marks entry checks (7.3) |
 | Spec references | `docs/api/academic-structure.md`, schema → `teacher_assignments` |
@@ -31,9 +31,9 @@ Failures: duplicate tuple → 422; class/section mismatch (section not in class)
 ### DELETE — 200; no RESTRICT dependents expected.
 
 ## Success Criteria
-- [ ] Duplicate-tuple and section-belongs-to-class validation
-- [ ] Filters work; nested names in resource (eager loaded — no N+1)
-- [ ] Tests green (run after 2.1 if teachers table required)
+- [x] Duplicate-tuple and section-belongs-to-class validation
+- [x] Filters work; nested names in resource (eager loaded — no N+1)
+- [x] Tests green (teacher_id unconstrained; full teacher-FK testing in 2.1)
 
 ## Required Tests
 1. create happy; duplicate 422; section/class mismatch 422
