@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 4 — Students & Parents |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 3.5 |
 | Blocks | 4.2, 4.3, attendance/results/fees policies |
 | Spec references | `docs/api/students.md`, schema → `students` |

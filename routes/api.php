@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\ClassController;
 use App\Http\Controllers\Api\V1\PublicAdmissionController;
 use App\Http\Controllers\Api\V1\SectionController;
 use App\Http\Controllers\Api\V1\SessionController;
+use App\Http\Controllers\Api\V1\StudentController;
 use App\Http\Controllers\Api\V1\SubjectController;
 use App\Http\Controllers\Api\V1\TeacherAssignmentController;
 use App\Http\Controllers\Api\V1\TeacherController;
@@ -97,6 +98,28 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::post('teachers/{teacher}/resend-credentials', [TeacherController::class, 'resendCredentials'])
             ->middleware('permission:teacher.create')
             ->name('teachers.resend-credentials');
+    });
+
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('students', [StudentController::class, 'index'])
+            ->middleware('permission:student.view')
+            ->name('students.index');
+
+        // show authorizes via StudentPolicy::view — staff or the student itself.
+        Route::get('students/{student}', [StudentController::class, 'show'])
+            ->name('students.show');
+
+        Route::put('students/{student}', [StudentController::class, 'update'])
+            ->middleware('permission:student.update')
+            ->name('students.update');
+
+        Route::patch('students/{student}/status', [StudentController::class, 'updateStatus'])
+            ->middleware('permission:student.update')
+            ->name('students.status');
+
+        Route::post('students/{student}/photo', [StudentController::class, 'photo'])
+            ->middleware('permission:student.update')
+            ->name('students.photo');
     });
 
     Route::middleware(['auth:sanctum', 'permission:admission.view'])->group(function () {
