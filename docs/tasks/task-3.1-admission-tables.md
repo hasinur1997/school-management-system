@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 3 — Admissions |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 2.3 |
 | Blocks | 3.3–3.5 |
 | Spec references | schema → `admission_applications`, `admission_previous_educations` |
