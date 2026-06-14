@@ -291,6 +291,24 @@ Route::prefix('v1')->name('v1.')->group(function () {
             ->name('annual-results.publish');
     });
 
+    // Result reads (8.3). Search is staff-only (result.view, staff see
+    // unpublished flagged). The enrollment + me reads carry no permission
+    // middleware: enrollmentResults authorizes via StudentPolicy::viewResults
+    // in the controller (staff/self/linked parent, 404 hiding), and meResults
+    // is student/parent self-service — so students/parents, who hold no
+    // result.view, can read their own published results.
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('results/search', [ResultController::class, 'search'])
+            ->middleware('permission:result.view')
+            ->name('results.search');
+
+        Route::get('enrollments/{id}/results', [ResultController::class, 'enrollmentResults'])
+            ->name('enrollments.results');
+
+        Route::get('me/results', [ResultController::class, 'meResults'])
+            ->name('me.results');
+    });
+
     Route::middleware(['auth:sanctum', 'permission:branch.manage'])->group(function () {
         Route::get('branches', [BranchController::class, 'index'])->name('branches.index');
         Route::post('branches', [BranchController::class, 'store'])->name('branches.store');

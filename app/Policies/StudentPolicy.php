@@ -47,4 +47,20 @@ class StudentPolicy
             ->first()
             ?->isLinkedTo($student->id) ?? false;
     }
+
+    /**
+     * A user may view a student's results if they hold result.view (staff, who
+     * also see unpublished previews), if they are that student, or if they are a
+     * parent linked to that student. (Super admins bypass via Gate::before.)
+     */
+    public function viewResults(User $user, Student $student): bool
+    {
+        if ($user->can('result.view') || $user->id === $student->user_id) {
+            return true;
+        }
+
+        return ParentProfile::where('user_id', $user->id)
+            ->first()
+            ?->isLinkedTo($student->id) ?? false;
+    }
 }

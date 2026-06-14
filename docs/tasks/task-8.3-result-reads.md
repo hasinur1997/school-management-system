@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 8 — Results |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 8.2 |
 | Blocks | 8.4 |
 | Spec references | `docs/api/results.md` |

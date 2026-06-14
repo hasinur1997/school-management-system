@@ -4,10 +4,13 @@ namespace App\Services;
 
 use App\Enums\EnrollmentStatus;
 use App\Enums\ExamStatus;
+use App\Enums\ExamType;
+use App\Models\AnnualResult;
 use App\Models\Enrollment;
 use App\Models\Exam;
 use App\Models\ExamResult;
 use App\Models\Mark;
+use App\Models\Student;
 use App\Models\Subject;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -143,6 +146,113 @@ class ResultService
             )
             ->orderByDesc('gpa')
             ->paginate($perPage);
+    }
+
+    /**
+     * Resolve the enrollment a result search points at. Either an admission_no
+     * (→ the student's current enrollment, falling back to their latest) or the
+     * full (session, class, section, roll) coordinates. Both styles resolve
+     * through the branch-scoped Student model, so an out-of-branch match — or no
+     * match at all — yields a 404.
+     *
+     * @param  array{admission_no?: string, session_id?: int, class_id?: int, section_id?: int, roll_no?: int}  $criteria
+     */
+    public function searchEnrollment(array $criteria): Enrollment
+    {
+        if (isset($criteria['admission_no'])) {
+            $student = Student::query()
+                ->where('admission_no', $criteria['admission_no'])
+                ->firstOrFail();
+
+            return $this->enrollmentForStudent($student, null);
+        }
+
+        return Enrollment::query()
+            ->whereHas('student')
+            ->where('session_id', $criteria['session_id'])
+            ->where('class_id', $criteria['class_id'])
+            ->where('section_id', $criteria['section_id'])
+            ->where('roll_no', $criteria['roll_no'])
+            ->firstOrFail();
+    }
+
+    /**
+     * Resolve a single enrollment by id, scoped to the caller's branch through
+     * its student (Enrollment has no branch_id of its own). Out-of-branch ids
+     * 404. The student is eager loaded for the downstream policy check.
+     */
+    public function resolveEnrollment(int $id): Enrollment
+    {
+        return Enrollment::query()
+            ->whereHas('student')
+            ->with('student')
+            ->findOrFail($id);
+    }
+
+    /**
+     * Resolve a student's enrollment for the result reads: the named session
+     * when given, otherwise the current-session enrollment falling back to the
+     * latest. A student with no matching enrollment → 404.
+     */
+    public function enrollmentForStudent(Student $student, ?int $sessionId): Enrollment
+    {
+        $enrollment = $sessionId !== null
+            ? $student->enrollments()->where('session_id', $sessionId)->first()
+            : ($student->currentEnrollment()->first()
+                ?? $student->enrollments()->orderByDesc('session_id')->first());
+
+        abort_if($enrollment === null, 404);
+
+        return $enrollment;
+    }
+
+    /**
+     * Build a student's full result bundle for one enrollment: the student
+     * header, each per-exam result (in S1 → S2 → Final order) with its subject
+     * marks, and the annual result.
+     *
+     * When $publishedOnly (students/parents) unpublished per-exam results are
+     * omitted and the annual result is null unless published; otherwise every
+     * result is included and flagged with its published state (staff preview).
+     * Everything the resource touches is eager loaded — no N+1.
+     *
+     * @return array{
+     *     enrollment: Enrollment,
+     *     exam_results: Collection<int, ExamResult>,
+     *     marks_by_exam: Collection<int|string, Collection<int, Mark>>,
+     *     annual: ?AnnualResult,
+     * }
+     */
+    public function bundle(Enrollment $enrollment, bool $publishedOnly): array
+    {
+        $enrollment->loadMissing(['student', 'schoolClass', 'section']);
+
+        $examResults = ExamResult::query()
+            ->where('enrollment_id', $enrollment->id)
+            ->when($publishedOnly, fn (Builder $query) => $query->whereNotNull('published_at'))
+            ->with('exam')
+            ->get()
+            ->sortBy(fn (ExamResult $result): int => array_search($result->exam->type, ExamType::cases(), true))
+            ->values();
+
+        $marksByExam = Mark::query()
+            ->where('enrollment_id', $enrollment->id)
+            ->whereIn('exam_id', $examResults->pluck('exam_id'))
+            ->with('subject')
+            ->get()
+            ->groupBy('exam_id');
+
+        $annual = AnnualResult::query()
+            ->where('enrollment_id', $enrollment->id)
+            ->when($publishedOnly, fn (Builder $query) => $query->whereNotNull('published_at'))
+            ->first();
+
+        return [
+            'enrollment' => $enrollment,
+            'exam_results' => $examResults,
+            'marks_by_exam' => $marksByExam,
+            'annual' => $annual,
+        ];
     }
 
     /**
