@@ -13,7 +13,7 @@ class TeacherAssignmentService
      *
      * @var array<int, string>
      */
-    private const RELATIONS = ['schoolClass', 'session', 'section', 'subject'];
+    private const RELATIONS = ['teacher', 'schoolClass', 'session', 'section', 'subject'];
 
     /**
      * List assignments, filtered by teacher/class/session, paginated.
