@@ -50,7 +50,7 @@ class CategoryService
      */
     public function delete(Category $category): void
     {
-        abort_if($category->incomes()->exists(), 409, 'Category is in use');
+        abort_if($category->incomes()->exists() || $category->expenses()->exists(), 409, 'Category is in use');
 
         $category->delete();
     }

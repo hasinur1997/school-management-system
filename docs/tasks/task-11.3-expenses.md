@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 11 — Finance |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 11.1 |
 | Blocks | Reports 13.2 |
 | Spec references | `docs/api/finance.md`, schema → `expenses` |
@@ -22,7 +22,7 @@ Failures: income-type category → 422; negative amount → 422.
 ### GET /expenses?from=&to=&category_id=&search= — 200 paginated. PUT/DELETE — plain 200 (no system rows here).
 
 ## Success Criteria
-- [ ] CRUD + filters mirror incomes; category-type check; tests green
+- [x] CRUD + filters mirror incomes; category-type check; tests green
 
 ## Required Tests
 1. CRUD; income-category 422; 2. range/search filters; 3. branch isolation 404

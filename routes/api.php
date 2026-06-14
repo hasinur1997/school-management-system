@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CheckinIpController;
 use App\Http\Controllers\Api\V1\ClassController;
 use App\Http\Controllers\Api\V1\ExamController;
+use App\Http\Controllers\Api\V1\ExpenseController;
 use App\Http\Controllers\Api\V1\FeeStructureController;
 use App\Http\Controllers\Api\V1\GradingScaleController;
 use App\Http\Controllers\Api\V1\IncomeController;
@@ -434,6 +435,17 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::post('incomes', [IncomeController::class, 'store'])->name('incomes.store');
         Route::put('incomes/{income}', [IncomeController::class, 'update'])->name('incomes.update');
         Route::delete('incomes/{income}', [IncomeController::class, 'destroy'])->name('incomes.destroy');
+    });
+
+    // Expenses (11.3): manual expense ledger CRUD mirroring incomes (same
+    // filters/sorts). Guarded by expense.manage; out-of-branch {expense}
+    // bindings 404 via BranchScope. category_id must be an expense-type
+    // category in the caller's branch (validated in the Form Requests).
+    Route::middleware(['auth:sanctum', 'permission:expense.manage'])->group(function () {
+        Route::get('expenses', [ExpenseController::class, 'index'])->name('expenses.index');
+        Route::post('expenses', [ExpenseController::class, 'store'])->name('expenses.store');
+        Route::put('expenses/{expense}', [ExpenseController::class, 'update'])->name('expenses.update');
+        Route::delete('expenses/{expense}', [ExpenseController::class, 'destroy'])->name('expenses.destroy');
     });
 
     Route::middleware(['auth:sanctum', 'permission:branch.manage'])->group(function () {

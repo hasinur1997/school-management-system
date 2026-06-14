@@ -40,4 +40,12 @@ class Category extends Model
     {
         return $this->hasMany(Income::class);
     }
+
+    /**
+     * Expense rows grouped under this category.
+     */
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(Expense::class);
+    }
 }
