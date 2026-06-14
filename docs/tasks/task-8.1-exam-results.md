@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 8 — Results |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 7.3 |
 | Blocks | 8.2–8.4, Phase 9 |
 | Spec references | `docs/api/results.md`, schema → `exam_results` |
@@ -31,9 +31,9 @@ Published exam → 409. No marks at all → 422 "No marks entered for this exam"
 ### GET /exams/3/results — 200 rows `{ enrollment_id, roll_no, name_en, total_marks: "428.50", gpa: "4.25", grade": "A", is_passed: true }`.
 
 ## Success Criteria
-- [ ] GPA math + any-F rule exact (unit-tested with fixed fixtures)
-- [ ] Idempotent regenerate until publish; publish freezes (regenerate 409)
-- [ ] Skipped/missing-subject reporting; tests green
+- [x] GPA math + any-F rule exact (unit-tested with fixed fixtures)
+- [x] Idempotent regenerate until publish; publish freezes (regenerate 409)
+- [x] Skipped/missing-subject reporting; tests green
 
 ## Required Tests
 1. unit: GPA average, rounding, any-F fail, grade mapping

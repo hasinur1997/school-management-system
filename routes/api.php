@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\GradingScaleController;
 use App\Http\Controllers\Api\V1\MarkController;
 use App\Http\Controllers\Api\V1\ParentController;
 use App\Http\Controllers\Api\V1\PublicAdmissionController;
+use App\Http\Controllers\Api\V1\ResultController;
 use App\Http\Controllers\Api\V1\SectionController;
 use App\Http\Controllers\Api\V1\SessionController;
 use App\Http\Controllers\Api\V1\StudentController;
@@ -259,6 +260,23 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::get('exams/{exam}/marks', [MarkController::class, 'index'])
             ->middleware('permission:marks.view')
             ->name('exams.marks.index');
+    });
+
+    // Per-exam results: generate/publish (result.generate) and browse
+    // (result.view). Results are branch-scoped through the enrollment and the
+    // {exam} binding 404s out-of-branch via BranchScope.
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('exams/{exam}/results/generate', [ResultController::class, 'generate'])
+            ->middleware('permission:result.generate')
+            ->name('exams.results.generate');
+
+        Route::post('exams/{exam}/results/publish', [ResultController::class, 'publish'])
+            ->middleware('permission:result.generate')
+            ->name('exams.results.publish');
+
+        Route::get('exams/{exam}/results', [ResultController::class, 'index'])
+            ->middleware('permission:result.view')
+            ->name('exams.results.index');
     });
 
     Route::middleware(['auth:sanctum', 'permission:branch.manage'])->group(function () {
