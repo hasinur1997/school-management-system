@@ -16,4 +16,18 @@ return [
 
     'invoice_due_day' => 10,
 
+    /*
+    |--------------------------------------------------------------------------
+    | Partial Payment
+    |--------------------------------------------------------------------------
+    |
+    | When false, a counter (cash) payment must settle the full outstanding
+    | amount of an invoice; when true, a partial amount (0 < amount <=
+    | outstanding) is accepted, leaving the invoice `partial`. Default consulted
+    | by the SettingsRepository stub until the settings table arrives in 14.1.
+    |
+    */
+
+    'partial_payment_enabled' => false,
+
 ];

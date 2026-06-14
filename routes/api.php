@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\ExamController;
 use App\Http\Controllers\Api\V1\FeeStructureController;
 use App\Http\Controllers\Api\V1\GradingScaleController;
 use App\Http\Controllers\Api\V1\InvoiceController;
+use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\MarkController;
 use App\Http\Controllers\Api\V1\ParentController;
 use App\Http\Controllers\Api\V1\PromotionController;
@@ -373,6 +374,21 @@ Route::prefix('v1')->name('v1.')->group(function () {
 
         Route::get('invoices/{id}', [InvoiceController::class, 'show'])
             ->name('invoices.show');
+    });
+
+    // Payments (10.3): counter (cash) collection settles an invoice through the
+    // PaymentService pipeline (payment → invoice → income → receipt_no), guarded
+    // by fee.collect; out-of-branch {invoice} ids 404 via BranchScope binding.
+    // The receipt PDF carries no permission middleware — it authorizes via
+    // StudentPolicy::viewInvoices (staff/self/linked parent, 404 hiding) and only
+    // for a paid payment; out-of-branch {id} 404s via BranchScope.
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('invoices/{invoice}/payments/local', [PaymentController::class, 'local'])
+            ->middleware('permission:fee.collect')
+            ->name('payments.local');
+
+        Route::get('payments/{id}/receipt', [PaymentController::class, 'receipt'])
+            ->name('payments.receipt');
     });
 
     Route::middleware(['auth:sanctum', 'permission:branch.manage'])->group(function () {

@@ -32,9 +32,7 @@ class InvoiceResource extends JsonResource
             'paid_amount' => $this->paid_amount,
             'status' => $this->status->value,
             'due_date' => $this->due_date?->toDateString(),
-            // Payments arrive in Task 10.3+; the detail view exposes the field
-            // now (empty until then) to match the API contract.
-            'payments' => [],
+            'payments' => PaymentResource::collection($this->whenLoaded('payments')),
         ];
     }
 }

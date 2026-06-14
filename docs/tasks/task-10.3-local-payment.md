@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 10 — Fees & Payments |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 10.2 (and 11.2's incomes table — see note) |
 | Blocks | 10.4 |
 | Spec references | `docs/api/fees-payments.md`, `architecture-context.md` → Payment Model |

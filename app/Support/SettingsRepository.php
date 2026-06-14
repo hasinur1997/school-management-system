@@ -26,4 +26,13 @@ class SettingsRepository
     {
         return (int) config('fees.invoice_due_day', 10);
     }
+
+    /**
+     * Whether a counter payment may settle an invoice partially. When false,
+     * cash collection requires the full outstanding amount. Defaults to false.
+     */
+    public function partialPaymentEnabled(): bool
+    {
+        return (bool) config('fees.partial_payment_enabled', false);
+    }
 }

@@ -171,7 +171,10 @@ class InvoiceService
         // user_id is needed by StudentPolicy::viewInvoices to match a student to
         // their own invoice.
         return Invoice::query()
-            ->with('student:id,name_en,user_id')
+            ->with([
+                'student:id,name_en,user_id',
+                'payments' => fn ($query) => $query->latest('id'),
+            ])
             ->findOrFail($id);
     }
 
