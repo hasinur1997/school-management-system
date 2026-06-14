@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 6 — Teacher Attendance |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 6.2 |
 | Blocks | Reports (13.3), dashboard |
 | Spec references | `docs/api/teacher-attendance.md` |

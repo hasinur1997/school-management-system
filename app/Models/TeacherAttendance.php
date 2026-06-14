@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\TeacherAttendanceStatus;
+use App\Models\Concerns\BelongsToBranchThroughTeacher;
 use Database\Factories\TeacherAttendanceFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +13,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * A teacher's daily attendance record, created on self check-in and optionally
  * corrected by an admin. Branch is derived through the teacher relation, so the
- * model carries no branch_id of its own. Check-in/check-out logic lands in 6.2.
+ * model carries no branch_id of its own — BelongsToBranchThroughTeacher hides
+ * out-of-branch rows (404) on browse and route-model binding.
  */
 #[Fillable([
     'teacher_id', 'date', 'check_in_at', 'check_out_at',
@@ -21,7 +23,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class TeacherAttendance extends Model
 {
     /** @use HasFactory<TeacherAttendanceFactory> */
-    use HasFactory;
+    use BelongsToBranchThroughTeacher, HasFactory;
 
     /**
      * Get the attributes that should be cast.

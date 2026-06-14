@@ -187,6 +187,19 @@ Route::prefix('v1')->name('v1.')->group(function () {
     Route::middleware(['auth:sanctum', 'role:teacher'])->group(function () {
         Route::post('teacher-attendance/check-in', [TeacherAttendanceController::class, 'checkIn'])->name('teacher-attendance.check-in');
         Route::post('teacher-attendance/check-out', [TeacherAttendanceController::class, 'checkOut'])->name('teacher-attendance.check-out');
+        Route::get('me/teacher-attendance', [TeacherAttendanceController::class, 'me'])->name('me.teacher-attendance');
+    });
+
+    // Admin browse + correction. Records are branch-scoped through the teacher,
+    // so out-of-branch {teacherAttendance} bindings 404 automatically.
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('teacher-attendance', [TeacherAttendanceController::class, 'index'])
+            ->middleware('permission:teacher_attendance.view')
+            ->name('teacher-attendance.index');
+
+        Route::put('teacher-attendance/{teacherAttendance}', [TeacherAttendanceController::class, 'update'])
+            ->middleware('permission:teacher_attendance.manage')
+            ->name('teacher-attendance.update');
     });
 
     // Teacher check-in IP whitelist management. Entries are branch-scoped via

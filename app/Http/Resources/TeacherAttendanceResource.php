@@ -25,6 +25,14 @@ class TeacherAttendanceResource extends JsonResource
             'check_in_at' => $this->check_in_at?->toIso8601String(),
             'check_out_at' => $this->check_out_at?->toIso8601String(),
             'status' => $this->status->value,
+            'teacher' => $this->whenLoaded('teacher', fn () => [
+                'id' => $this->teacher->id,
+                'name' => $this->teacher->name,
+            ]),
+            'corrected_by' => $this->whenLoaded('correctedBy', fn () => $this->correctedBy === null ? null : [
+                'id' => $this->correctedBy->id,
+                'name' => $this->correctedBy->name,
+            ]),
         ];
     }
 }
