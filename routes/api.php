@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BranchController;
 use App\Http\Controllers\Api\V1\CheckinIpController;
 use App\Http\Controllers\Api\V1\ClassController;
+use App\Http\Controllers\Api\V1\GradingScaleController;
 use App\Http\Controllers\Api\V1\ParentController;
 use App\Http\Controllers\Api\V1\PublicAdmissionController;
 use App\Http\Controllers\Api\V1\SectionController;
@@ -209,6 +210,16 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::post('checkin-ips', [CheckinIpController::class, 'store'])->name('checkin-ips.store');
         Route::put('checkin-ips/{checkinIp}', [CheckinIpController::class, 'update'])->name('checkin-ips.update');
         Route::delete('checkin-ips/{checkinIp}', [CheckinIpController::class, 'destroy'])->name('checkin-ips.destroy');
+    });
+
+    // Grading scale: a single global scale. Reads are open to any authenticated
+    // user (cached); the full-replace write requires setting.manage.
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('grading-scales', [GradingScaleController::class, 'index'])->name('grading-scales.index');
+
+        Route::put('grading-scales', [GradingScaleController::class, 'update'])
+            ->middleware('permission:setting.manage')
+            ->name('grading-scales.update');
     });
 
     Route::middleware(['auth:sanctum', 'permission:branch.manage'])->group(function () {

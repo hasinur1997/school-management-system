@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 7 — Exams & Marks |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 6.3 |
 | Blocks | 7.3, Phase 8 |
 | Spec references | `docs/api/exams-marks.md`, schema → `grading_scales` |
@@ -27,7 +27,7 @@ Success — 200 new scale. Failures: gap (e.g., missing 33–39) → 422 "Scale 
 ### GET — 200 ordered scale array.
 
 ## Success Criteria
-- [ ] Seeder exact; coverage/overlap/fail-row validation; resolver correct at boundaries (32→F, 33→D, 80→A+); cache invalidated on PUT; tests green
+- [x] Seeder exact; coverage/overlap/fail-row validation; resolver correct at boundaries (32→F, 33→D, 80→A+); cache invalidated on PUT; tests green
 
 ## Required Tests
 1. resolver boundary unit tests; 2. PUT happy; gap/overlap/multi-fail 422s; 3. cache refresh after PUT

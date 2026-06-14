@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             BranchSeeder::class,
             AcademicSessionSeeder::class,
             SchoolClassSeeder::class,
+            GradingScaleSeeder::class,
         ]);
 
         User::factory()->create([
