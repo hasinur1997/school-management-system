@@ -79,3 +79,5 @@ Progress state must reflect the actual state of the implementation, not the inte
 3. No invariant defined in `docs/architecture-context.md` was violated — especially: money in transactions, immutable published results, TC exclusion by scope, permission-based authorization.
 4. `docs/progress-tracker.md` reflects the completed work, including any open questions raised.
 5. Seeders and factories cover any new reference data the unit introduced.
+
+6. After completing any task commit it with proper commit message and go next task and complete it exactly as specified.

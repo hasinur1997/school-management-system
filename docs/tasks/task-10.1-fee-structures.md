@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 10 — Fees & Payments |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 9.3 |
 | Blocks | 10.2 |
 | Spec references | `docs/api/fees-payments.md`, schema → `fee_structures` |
@@ -24,7 +24,7 @@ Request: `{ "session_id": 1, "class_id": 7, "monthly_fee": "1500.00" }` → 201.
 ### PUT — `{ "monthly_fee": "1600.00" }` → 200 (affects only future invoice generation — existing invoices keep their copied amount).
 
 ## Success Criteria
-- [ ] Unique tuple; decimal-string money in responses; no delete route; tests green
+- [x] Unique tuple; decimal-string money in responses; no delete route; tests green
 
 ## Required Tests
 1. create + duplicate 422; 2. update amount; 3. money serialized as "1600.00" string

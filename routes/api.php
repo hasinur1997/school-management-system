@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\BranchController;
 use App\Http\Controllers\Api\V1\CheckinIpController;
 use App\Http\Controllers\Api\V1\ClassController;
 use App\Http\Controllers\Api\V1\ExamController;
+use App\Http\Controllers\Api\V1\FeeStructureController;
 use App\Http\Controllers\Api\V1\GradingScaleController;
 use App\Http\Controllers\Api\V1\MarkController;
 use App\Http\Controllers\Api\V1\ParentController;
@@ -332,6 +333,22 @@ Route::prefix('v1')->name('v1.')->group(function () {
     Route::middleware(['auth:sanctum', 'permission:promotion.view'])->group(function () {
         Route::get('promotions', [PromotionController::class, 'index'])
             ->name('promotions.index');
+    });
+
+    // Fee structures (10.1): the monthly fee per (branch, session, class) that
+    // invoices copy at generation time. CRUD guarded by fee.manage; no DELETE
+    // (history matters). Out-of-branch {fee_structure} bindings 404 via
+    // BranchScope; fee structures carry their own branch_id so list/show are
+    // branch-isolated automatically.
+    Route::middleware(['auth:sanctum', 'permission:fee.manage'])->group(function () {
+        Route::get('fee-structures', [FeeStructureController::class, 'index'])
+            ->name('fee-structures.index');
+
+        Route::post('fee-structures', [FeeStructureController::class, 'store'])
+            ->name('fee-structures.store');
+
+        Route::put('fee-structures/{feeStructure}', [FeeStructureController::class, 'update'])
+            ->name('fee-structures.update');
     });
 
     Route::middleware(['auth:sanctum', 'permission:branch.manage'])->group(function () {
