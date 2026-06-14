@@ -14,6 +14,7 @@ use App\Services\PaymentService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class PaymentController extends ApiController
@@ -97,5 +98,53 @@ class PaymentController extends ApiController
 
         return Pdf::loadView('pdf.receipt', ['payment' => $payment])
             ->stream("receipt-{$payment->receipt_no}.pdf");
+    }
+
+    /**
+     * SSLCommerz IPN — the server-to-server callback that is the source of
+     * truth. Public (no auth: BranchScope is bypassed, so the payment is found
+     * globally by transaction id). Idempotent: a replayed IPN for a settled
+     * payment is a no-op. Unknown tran_id → 422 (logged); validation/amount
+     * mismatch → payment failed + 422; valid first call → settle + 200.
+     */
+    public function ipn(Request $request): JsonResponse
+    {
+        $tranId = (string) $request->input('tran_id');
+
+        $payment = Payment::query()
+            ->where('transaction_id', $tranId)
+            ->first();
+
+        if ($payment === null) {
+            Log::warning('SSLCommerz IPN for unknown transaction id.', ['tran_id' => $tranId]);
+
+            return $this->error('Unknown transaction', Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $result = $this->payments->settleFromIpn($payment, $request->all());
+
+        if ($result['status'] === 'failed') {
+            return $this->error('Payment validation failed', Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        return $this->success($result);
+    }
+
+    /**
+     * SSLCommerz browser-redirect landing (success / fail / cancel). Public and
+     * read-only — the IPN drives all state changes; this only reports the
+     * payment's current status so the frontend can poll/redirect. No DB writes.
+     * Unknown tran_id → 404.
+     */
+    public function landing(Request $request): JsonResponse
+    {
+        $payment = Payment::query()
+            ->where('transaction_id', (string) $request->input('tran_id'))
+            ->firstOrFail();
+
+        return $this->success([
+            'payment_id' => $payment->id,
+            'status' => $payment->status->value,
+        ]);
     }
 }

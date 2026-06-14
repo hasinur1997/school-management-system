@@ -11,9 +11,9 @@ use App\Http\Controllers\Api\V1\ExamController;
 use App\Http\Controllers\Api\V1\FeeStructureController;
 use App\Http\Controllers\Api\V1\GradingScaleController;
 use App\Http\Controllers\Api\V1\InvoiceController;
-use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\MarkController;
 use App\Http\Controllers\Api\V1\ParentController;
+use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PromotionController;
 use App\Http\Controllers\Api\V1\PublicAdmissionController;
 use App\Http\Controllers\Api\V1\ResultController;
@@ -36,6 +36,19 @@ Route::prefix('v1')->name('v1.')->group(function () {
 
         Route::get('admissions/{application_no}/status', [PublicAdmissionController::class, 'status'])
             ->name('admissions.status');
+    });
+
+    // SSLCommerz callbacks (10.5) — public surface, no auth. The IPN is the
+    // server-to-server source of truth (idempotent settlement); the landing
+    // routes are browser redirects that only report the payment's status and
+    // change no state. Paths must match the callback URLs built in
+    // SslCommerzGateway (/api/v1/payments/sslcommerz/*).
+    Route::prefix('payments/sslcommerz')->name('payments.sslcommerz.')->group(function () {
+        Route::post('ipn', [PaymentController::class, 'ipn'])->name('ipn');
+
+        Route::get('{result}', [PaymentController::class, 'landing'])
+            ->whereIn('result', ['success', 'fail', 'cancel'])
+            ->name('landing');
     });
 
     Route::prefix('auth')->name('auth.')->group(function () {

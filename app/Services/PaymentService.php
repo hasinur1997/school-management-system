@@ -6,6 +6,7 @@ use App\Contracts\PaymentGateway;
 use App\Enums\InvoiceStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
+use App\Jobs\SendPaymentReceipt;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\User;
@@ -147,6 +148,54 @@ class PaymentService
             ]);
 
             return $payment->setRelation('invoice', $invoice);
+        });
+    }
+
+    /**
+     * Settle a payment from an SSLCommerz IPN callback — the gateway is the
+     * source of truth. One transaction holds a lockForUpdate on the payment row
+     * across the whole flow so a replayed or concurrent IPN cannot double-post:
+     *
+     *  - already paid → no-op, reports `already_processed` (idempotent);
+     *  - gateway validation fails, or the reported amount doesn't match the
+     *    pending payment → payment marked `failed`, reports `failed` (422);
+     *  - valid → store the gateway payload, run the settle() pipeline, queue the
+     *    payer notification; reports `paid` with the receipt number.
+     *
+     * Returns a status descriptor the controller maps to an HTTP response. No
+     * abort() is raised inside the transaction so the `failed` write commits
+     * rather than rolling back.
+     *
+     * @param  array<string, mixed>  $payload  the raw IPN form fields
+     * @return array{status: string, receipt_no?: string}
+     */
+    public function settleFromIpn(Payment $payment, array $payload): array
+    {
+        return DB::transaction(function () use ($payment, $payload): array {
+            $payment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
+
+            if ($payment->status === PaymentStatus::Paid) {
+                return ['status' => 'already_processed'];
+            }
+
+            $amountMatches = bccomp((string) ($payload['amount'] ?? '0'), $payment->amount, 2) === 0;
+
+            if (! $amountMatches || ! $this->gateway->validate($payment->transaction_id, $payload)) {
+                $payment->forceFill([
+                    'status' => PaymentStatus::Failed,
+                    'gateway_payload' => $payload,
+                ])->save();
+
+                return ['status' => 'failed'];
+            }
+
+            $payment->forceFill(['gateway_payload' => $payload])->save();
+
+            $settled = $this->settle($payment);
+
+            SendPaymentReceipt::dispatch($settled)->afterCommit();
+
+            return ['status' => 'paid', 'receipt_no' => $settled->receipt_no];
         });
     }
 

@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 10 — Fees & Payments |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 10.4 |
 | Blocks | — |
 | Spec references | `docs/api/fees-payments.md`, invariant 5 |
