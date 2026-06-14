@@ -35,4 +35,29 @@ class SettingsRepository
     {
         return (bool) config('fees.partial_payment_enabled', false);
     }
+
+    /**
+     * SSLCommerz store id used to open checkout sessions and validate callbacks.
+     */
+    public function sslcommerzStoreId(): ?string
+    {
+        return config('services.sslcommerz.store_id');
+    }
+
+    /**
+     * SSLCommerz store password paired with the store id.
+     */
+    public function sslcommerzStorePassword(): ?string
+    {
+        return config('services.sslcommerz.store_password');
+    }
+
+    /**
+     * Whether SSLCommerz runs against the sandbox host (true) or live (false).
+     * Defaults to sandbox.
+     */
+    public function sslcommerzSandbox(): bool
+    {
+        return (bool) config('services.sslcommerz.sandbox', true);
+    }
 }

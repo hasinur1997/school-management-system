@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 10 — Fees & Payments |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 10.3 |
 | Blocks | 10.5 |
 | Spec references | `docs/api/fees-payments.md`, `architecture-context.md` |
@@ -26,8 +26,8 @@ Success — 201 `{ "data": { "payment_id": 42, "transaction_id": "TXN-...", "gat
 Failures: invoice paid → 409; amount rules as 10.3 → 422; gateway unreachable/error → 502 `{ "message": "Payment gateway unavailable. Try again." }` (payment marked failed); unrelated student/parent → 404.
 
 ## Success Criteria
-- [ ] Interface-faked tests (no network); pending payment + tran_id persisted before redirect
-- [ ] Gateway failure handling (502 + payment failed); policy matrix; tests green
+- [x] Interface-faked tests (no network); pending payment + tran_id persisted before redirect
+- [x] Gateway failure handling (502 + payment failed); policy matrix; tests green
 
 ## Required Tests
 1. init happy (fake returns URL); pending payment row asserted

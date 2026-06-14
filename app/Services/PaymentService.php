@@ -2,15 +2,19 @@
 
 namespace App\Services;
 
+use App\Contracts\PaymentGateway;
 use App\Enums\InvoiceStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\User;
+use App\Support\Payments\GatewaySession;
 use App\Support\SettingsRepository;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 /**
  * Owns the payment settlement pipeline. settle() is the single transaction
@@ -20,7 +24,10 @@ use Illuminate\Validation\ValidationException;
  */
 class PaymentService
 {
-    public function __construct(private readonly SettingsRepository $settings) {}
+    public function __construct(
+        private readonly SettingsRepository $settings,
+        private readonly PaymentGateway $gateway,
+    ) {}
 
     /**
      * Record a counter (cash) payment against an invoice and settle it. The
@@ -52,6 +59,50 @@ class PaymentService
 
             return $this->settle($payment);
         });
+    }
+
+    /**
+     * Start an online (SSLCommerz) payment: create a pending payment with a
+     * generated transaction id, then open a gateway checkout session. The pending
+     * payment + transaction id are persisted before the redirect; if the gateway
+     * is unreachable the payment is marked failed and a 502 is raised. The amount
+     * defaults to the outstanding balance and obeys the same partial-payment
+     * rules as counter collection.
+     *
+     * @return array{payment: Payment, session: GatewaySession}
+     *
+     * @throws ValidationException
+     */
+    public function initOnline(Invoice $invoice, ?string $amount, User $payer): array
+    {
+        if ($invoice->status === InvoiceStatus::Paid) {
+            abort(409, 'Invoice is already paid');
+        }
+
+        $outstanding = bcsub($invoice->amount, $invoice->paid_amount, 2);
+        $amount = $amount ?? $outstanding;
+
+        $this->assertAcceptableAmount($amount, $outstanding);
+
+        $payment = Payment::create([
+            'branch_id' => $invoice->branch_id,
+            'invoice_id' => $invoice->id,
+            'amount' => $amount,
+            'method' => PaymentMethod::Sslcommerz,
+            'status' => PaymentStatus::Pending,
+            'transaction_id' => 'TXN-'.Str::uuid(),
+            'collected_by' => $payer->id,
+        ]);
+
+        try {
+            $session = $this->gateway->createSession($payment);
+        } catch (Throwable) {
+            $payment->forceFill(['status' => PaymentStatus::Failed])->save();
+
+            abort(502, 'Payment gateway unavailable. Try again.');
+        }
+
+        return ['payment' => $payment, 'session' => $session];
     }
 
     /**

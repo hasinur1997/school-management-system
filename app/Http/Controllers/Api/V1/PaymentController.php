@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Api\ApiController;
 use App\Http\Requests\Payment\LocalPaymentRequest;
+use App\Http\Requests\Payment\OnlinePaymentRequest;
+use App\Http\Resources\OnlinePaymentInitResource;
 use App\Http\Resources\PaymentResource;
 use App\Models\Invoice;
 use App\Models\Payment;
@@ -35,6 +37,34 @@ class PaymentController extends ApiController
         return $this->success(
             PaymentResource::make($payment),
             'Payment recorded',
+            Response::HTTP_CREATED,
+        );
+    }
+
+    /**
+     * Open an SSLCommerz checkout for an invoice: create a pending payment and
+     * return the gateway URL for client redirect. Authorized via
+     * StudentPolicy::payOnline (staff fee.collect / self / linked parent); a
+     * denial hides existence (404). Out-of-branch {invoice} ids 404 via
+     * BranchScope binding. 409 when the invoice is already paid; 422
+     * (errors.amount) on a bad amount; 502 when the gateway is unreachable
+     * (payment marked failed).
+     */
+    public function online(OnlinePaymentRequest $request, Invoice $invoice): JsonResponse
+    {
+        if ($request->user()->cannot('payOnline', $invoice->student)) {
+            abort(404);
+        }
+
+        $init = $this->payments->initOnline(
+            $invoice,
+            $request->filled('amount') ? (string) $request->input('amount') : null,
+            $request->user(),
+        );
+
+        return $this->success(
+            OnlinePaymentInitResource::make($init),
+            'Checkout session created',
             Response::HTTP_CREATED,
         );
     }

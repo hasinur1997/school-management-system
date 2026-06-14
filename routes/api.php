@@ -387,6 +387,12 @@ Route::prefix('v1')->name('v1.')->group(function () {
             ->middleware('permission:fee.collect')
             ->name('payments.local');
 
+        // Online checkout init (10.4): no permission middleware — students and
+        // linked parents initiate too; StudentPolicy::payOnline authorizes
+        // (staff fee.collect / self / linked parent, 404 hiding).
+        Route::post('invoices/{invoice}/payments/online', [PaymentController::class, 'online'])
+            ->name('payments.online');
+
         Route::get('payments/{id}/receipt', [PaymentController::class, 'receipt'])
             ->name('payments.receipt');
     });
