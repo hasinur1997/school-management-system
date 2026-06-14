@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 9 — Promotion |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 9.2 |
 | Blocks | — |
 | Spec references | `docs/api/promotions.md` |
@@ -25,7 +25,7 @@ Failures: not passed without override permission → 403 "Student has not passed
 ### GET /promotions — 200 paginated history.
 
 ## Success Criteria
-- [ ] Override gate exact; duplicate-roll 422; history filters; tests green
+- [x] Override gate exact; duplicate-roll 422; history filters; tests green
 
 ## Required Tests
 1. passed student happy; 2. failed w/o override 403, with override 200; 3. duplicate roll 422; already-promoted 409; 4. history filter by type

@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 9 — Promotion |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 9.1 |
 | Blocks | 9.3 |
 | Spec references | `docs/api/promotions.md` |
@@ -25,9 +25,9 @@ Success — 200 `{ "data": { "promoted": 38, "held": 3 } }` (`held` = failed stu
 Failures: results unpublished → 409; already promoted (any target-session enrollment exists) → 409 "This class has already been promoted for the target session"; bad section/class pairing → 422; same session → 422.
 
 ## Success Criteria
-- [ ] Atomicity: induced failure mid-run leaves zero changes
-- [ ] Both roll strategies; failed-student same-class re-enrollment; promotion rows logged with type bulk
-- [ ] Re-run 409; bulk queries (not per-student); tests green
+- [x] Atomicity: induced failure mid-run leaves zero changes
+- [x] Both roll strategies; failed-student same-class re-enrollment; promotion rows logged with type bulk
+- [x] Re-run 409; bulk queries (not per-student); tests green
 
 ## Required Tests
 1. happy path: counts, enrollment statuses, logs, rolls by merit

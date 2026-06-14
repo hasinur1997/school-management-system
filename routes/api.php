@@ -321,6 +321,17 @@ Route::prefix('v1')->name('v1.')->group(function () {
         // session's in one transaction. Passed → next class, failed → same class.
         Route::post('promotions/bulk', [PromotionController::class, 'bulk'])
             ->name('promotions.bulk');
+
+        // Individual promote (9.3): move one student; failed/result-less needs
+        // promotion.override (checked in the service).
+        Route::post('promotions/individual', [PromotionController::class, 'individual'])
+            ->name('promotions.individual');
+    });
+
+    // Promotion history (9.3): paginated, filterable log under promotion.view.
+    Route::middleware(['auth:sanctum', 'permission:promotion.view'])->group(function () {
+        Route::get('promotions', [PromotionController::class, 'index'])
+            ->name('promotions.index');
     });
 
     Route::middleware(['auth:sanctum', 'permission:branch.manage'])->group(function () {

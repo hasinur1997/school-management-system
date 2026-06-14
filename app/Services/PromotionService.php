@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\EnrollmentStatus;
 use App\Enums\PromotionType;
+use App\Models\AcademicSession;
 use App\Models\AnnualResult;
 use App\Models\Enrollment;
 use App\Models\Promotion;
@@ -11,6 +12,7 @@ use App\Models\SchoolClass;
 use App\Models\Section;
 use App\Models\Student;
 use App\Models\User;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -215,6 +217,157 @@ class PromotionService
 
             return ['promoted' => count($passed), 'held' => count($failed)];
         });
+    }
+
+    /**
+     * Promote (or move) a single student into a target session/class/section
+     * with a chosen roll. Reuses the same close-old / create-new / log pipeline
+     * as the bulk path, in one transaction, but logged as type `individual`.
+     *
+     * By default the student must have a published, passed annual result on
+     * their current enrollment; a failed or result-less student may be promoted
+     * only by an actor holding `promotion.override` (403 otherwise). The
+     * student must have an open (active) enrollment to move out of (404), and
+     * must not already hold an enrollment in the target session (409). The
+     * structural 422 checks (in-branch student, section/class pairing, duplicate
+     * roll) are enforced upstream by IndividualPromotionRequest.
+     *
+     * @param  array{student_id: int, to_session_id: int, to_class_id: int, to_section_id: int, roll_no: int}  $data
+     * @return array{
+     *     student: array{id: int, name_en: string, admission_no: string},
+     *     from: array{class: string|null, session: string|null},
+     *     to: array{class: string|null, session: string|null, roll_no: int},
+     *     type: string,
+     * }
+     */
+    public function individual(array $data, User $actor): array
+    {
+        return DB::transaction(function () use ($data, $actor): array {
+            $studentId = $data['student_id'];
+            $toSessionId = $data['to_session_id'];
+            $toClassId = $data['to_class_id'];
+            $toSectionId = $data['to_section_id'];
+            $rollNo = $data['roll_no'];
+
+            // Source: the student's current active enrollment (the row being
+            // closed). Branch-scoped via the student, so out-of-branch never
+            // resolves; 404 when there is nothing open to promote.
+            $source = Enrollment::query()
+                ->where('student_id', $studentId)
+                ->where('status', EnrollmentStatus::Active->value)
+                ->whereHas('student')
+                ->with(['student:id,name_en,admission_no', 'schoolClass:id,name', 'session:id,name'])
+                ->orderByDesc('session_id')
+                ->first();
+
+            abort_if($source === null, 404, 'Student has no active enrollment to promote');
+
+            // 409: the student already sits in the target session.
+            $alreadyEnrolled = Enrollment::query()
+                ->where('student_id', $studentId)
+                ->where('session_id', $toSessionId)
+                ->exists();
+            abort_if($alreadyEnrolled, 409, 'Student is already enrolled in the target session');
+
+            // Pass gate: a published, passed annual result on the source
+            // enrollment promotes freely; otherwise promotion.override is needed.
+            $passed = AnnualResult::query()
+                ->where('enrollment_id', $source->id)
+                ->whereNotNull('published_at')
+                ->where('is_passed', true)
+                ->exists();
+
+            abort_if(
+                ! $passed && $actor->cannot('promotion.override'),
+                403,
+                'Student has not passed; override permission required',
+            );
+
+            $now = now();
+
+            // Close the old enrollment, open the new one, log the move.
+            $source->update(['status' => EnrollmentStatus::Promoted->value]);
+
+            $new = Enrollment::query()->create([
+                'student_id' => $studentId,
+                'session_id' => $toSessionId,
+                'class_id' => $toClassId,
+                'section_id' => $toSectionId,
+                'roll_no' => $rollNo,
+                'status' => EnrollmentStatus::Active->value,
+            ]);
+
+            Promotion::query()->create([
+                'student_id' => $studentId,
+                'from_enrollment_id' => $source->id,
+                'to_enrollment_id' => $new->id,
+                'type' => PromotionType::Individual->value,
+                'promoted_by' => $actor->id,
+                'promoted_at' => $now,
+            ]);
+
+            $student = $source->student;
+
+            return [
+                'student' => [
+                    'id' => $student->id,
+                    'name_en' => $student->name_en,
+                    'admission_no' => $student->admission_no,
+                ],
+                'from' => [
+                    'class' => $source->schoolClass?->name,
+                    'session' => $source->session?->name,
+                ],
+                'to' => [
+                    'class' => SchoolClass::query()->whereKey($toClassId)->value('name'),
+                    'session' => AcademicSession::query()->whereKey($toSessionId)->value('name'),
+                    'roll_no' => $rollNo,
+                ],
+                'type' => PromotionType::Individual->value,
+            ];
+        });
+    }
+
+    /**
+     * Paginated promotion history, newest first. Filters session_id / class_id
+     * (against the source enrollment) and type (bulk|individual). Branch
+     * isolation rides on the branch-scoped student relation — out-of-branch
+     * promotions never appear and unknown ids simply return no rows.
+     *
+     * @param  array{session_id?: int, class_id?: int, type?: string, per_page?: int}  $filters
+     * @return LengthAwarePaginator<int, Promotion>
+     */
+    public function history(array $filters): LengthAwarePaginator
+    {
+        $query = Promotion::query()
+            ->whereHas('student')
+            ->with([
+                'student:id,name_en',
+                'fromEnrollment:id,class_id',
+                'fromEnrollment.schoolClass:id,name',
+                'toEnrollment:id,class_id',
+                'toEnrollment.schoolClass:id,name',
+            ])
+            ->latest('promoted_at')
+            ->latest('id');
+
+        if (isset($filters['type'])) {
+            $query->where('type', $filters['type']);
+        }
+
+        if (isset($filters['session_id']) || isset($filters['class_id'])) {
+            $query->whereHas('fromEnrollment', function ($relation) use ($filters): void {
+                if (isset($filters['session_id'])) {
+                    $relation->where('session_id', $filters['session_id']);
+                }
+
+                if (isset($filters['class_id'])) {
+                    $relation->where('class_id', $filters['class_id']);
+                }
+            });
+        }
+
+        return $query->paginate($filters['per_page'] ?? 15);
     }
 
     /**
