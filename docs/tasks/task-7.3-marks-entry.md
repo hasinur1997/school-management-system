@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 7 — Exams & Marks |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 7.2 |
 | Blocks | Phase 8 |
 | Spec references | `docs/api/exams-marks.md`, schema → `marks` |
