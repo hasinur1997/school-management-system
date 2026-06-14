@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 11 — Finance |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 11.1 |
 | Blocks | Reports 13.2 |
 | Spec references | `docs/api/finance.md`, schema → `incomes` |
@@ -26,7 +26,7 @@ Failures: negative amount → 422; future date → allowed (no rule) — **decis
 ### GET — 200 paginated, `is_system` on every row; date-range filter inclusive.
 
 ## Success Criteria
-- [ ] System-row 403 both verbs; category-type check; range filter inclusive; tests green
+- [x] System-row 403 both verbs; category-type check; range filter inclusive; tests green
 
 ## Required Tests
 1. manual CRUD; expense-category 422

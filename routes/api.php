@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\ClassController;
 use App\Http\Controllers\Api\V1\ExamController;
 use App\Http\Controllers\Api\V1\FeeStructureController;
 use App\Http\Controllers\Api\V1\GradingScaleController;
+use App\Http\Controllers\Api\V1\IncomeController;
 use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\MarkController;
 use App\Http\Controllers\Api\V1\ParentController;
@@ -421,6 +422,18 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::post('categories', [CategoryController::class, 'store'])->name('categories.store');
         Route::put('categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
         Route::delete('categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
+    });
+
+    // Incomes (11.2): manual income ledger CRUD plus read access to the
+    // system-generated fee incomes Task 10.3 posts. Guarded by income.manage.
+    // Incomes carry their own branch_id, so list/show are branch-isolated and
+    // out-of-branch {income} bindings 404 via BranchScope. System-generated
+    // rows (payment_id set, is_system true) are immutable → update/delete 403.
+    Route::middleware(['auth:sanctum', 'permission:income.manage'])->group(function () {
+        Route::get('incomes', [IncomeController::class, 'index'])->name('incomes.index');
+        Route::post('incomes', [IncomeController::class, 'store'])->name('incomes.store');
+        Route::put('incomes/{income}', [IncomeController::class, 'update'])->name('incomes.update');
+        Route::delete('incomes/{income}', [IncomeController::class, 'destroy'])->name('incomes.destroy');
     });
 
     Route::middleware(['auth:sanctum', 'permission:branch.manage'])->group(function () {
