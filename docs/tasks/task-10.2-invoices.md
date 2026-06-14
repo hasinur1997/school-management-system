@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 10 — Fees & Payments |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 10.1 |
 | Blocks | 10.3–10.5 |
 | Spec references | `docs/api/fees-payments.md`, schema → `invoices` |
@@ -30,8 +30,8 @@ Request: `{ "month": 6, "year": 2026 }` → 200 `{ "data": { "created": 120, "sk
 Student/parent on unrelated invoice → 404.
 
 ## Success Criteria
-- [ ] Idempotent generation proven; TC/inactive skipped; amount copied (later fee edit doesn't change it)
-- [ ] Scheduler registered; policy matrix on reads; tests green
+- [x] Idempotent generation proven; TC/inactive skipped; amount copied (later fee edit doesn't change it)
+- [x] Scheduler registered; policy matrix on reads; tests green
 
 ## Required Tests
 1. generate → re-generate idempotent; TC student excluded

@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\ClassController;
 use App\Http\Controllers\Api\V1\ExamController;
 use App\Http\Controllers\Api\V1\FeeStructureController;
 use App\Http\Controllers\Api\V1\GradingScaleController;
+use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\MarkController;
 use App\Http\Controllers\Api\V1\ParentController;
 use App\Http\Controllers\Api\V1\PromotionController;
@@ -349,6 +350,29 @@ Route::prefix('v1')->name('v1.')->group(function () {
 
         Route::put('fee-structures/{feeStructure}', [FeeStructureController::class, 'update'])
             ->name('fee-structures.update');
+    });
+
+    // Invoices (10.2): monthly fee invoices generated from the class fee
+    // structure. Manual generation is fee.manage; it normally runs from the
+    // scheduler on the 1st. The list is staff-only (invoice.view). Show carries
+    // no permission middleware — it authorizes via StudentPolicy::viewInvoices
+    // (staff/self/linked parent, 404 hiding) so students/parents, who hold no
+    // invoice.view, can read their own. /me/invoices is student/parent
+    // self-service. Out-of-branch {invoice} ids 404 via BranchScope.
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('invoices/generate', [InvoiceController::class, 'generate'])
+            ->middleware('permission:fee.manage')
+            ->name('invoices.generate');
+
+        Route::get('invoices', [InvoiceController::class, 'index'])
+            ->middleware('permission:invoice.view')
+            ->name('invoices.index');
+
+        Route::get('me/invoices', [InvoiceController::class, 'me'])
+            ->name('me.invoices');
+
+        Route::get('invoices/{id}', [InvoiceController::class, 'show'])
+            ->name('invoices.show');
     });
 
     Route::middleware(['auth:sanctum', 'permission:branch.manage'])->group(function () {

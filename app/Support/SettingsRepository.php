@@ -17,4 +17,13 @@ class SettingsRepository
     {
         return config('attendance.teacher_late_threshold', '09:00');
     }
+
+    /**
+     * The day of the month a generated monthly invoice falls due. Defaults to
+     * the 10th.
+     */
+    public function invoiceDueDay(): int
+    {
+        return (int) config('fees.invoice_due_day', 10);
+    }
 }
