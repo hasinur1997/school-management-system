@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AdmissionController;
 use App\Http\Controllers\Api\V1\AnnualResultController;
+use App\Http\Controllers\Api\V1\AssetController;
 use App\Http\Controllers\Api\V1\AttendanceController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BranchController;
@@ -446,6 +447,18 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::post('expenses', [ExpenseController::class, 'store'])->name('expenses.store');
         Route::put('expenses/{expense}', [ExpenseController::class, 'update'])->name('expenses.update');
         Route::delete('expenses/{expense}', [ExpenseController::class, 'destroy'])->name('expenses.destroy');
+    });
+
+    // Assets (11.4): asset register CRUD plus an at-a-glance summary
+    // (total_value = in_use + damaged; disposed excluded). Guarded by
+    // asset.manage; out-of-branch {asset} bindings 404 via BranchScope.
+    // Filters status/search; sorts value/purchase_date.
+    Route::middleware(['auth:sanctum', 'permission:asset.manage'])->group(function () {
+        Route::get('assets', [AssetController::class, 'index'])->name('assets.index');
+        Route::get('assets/summary', [AssetController::class, 'summary'])->name('assets.summary');
+        Route::post('assets', [AssetController::class, 'store'])->name('assets.store');
+        Route::put('assets/{asset}', [AssetController::class, 'update'])->name('assets.update');
+        Route::delete('assets/{asset}', [AssetController::class, 'destroy'])->name('assets.destroy');
     });
 
     Route::middleware(['auth:sanctum', 'permission:branch.manage'])->group(function () {

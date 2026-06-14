@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 11 — Finance |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 11.3 |
 | Blocks | Reports 13.3 |
 | Spec references | `docs/api/finance.md`, schema → `assets` |
@@ -28,7 +28,7 @@ Request: `{ "name": "Projector", "value": "45000.00", "description": "Epson, Roo
 Disposed assets excluded from `total_value`? **Decision: total_value = in_use + damaged; disposed excluded.**
 
 ## Success Criteria
-- [ ] Summary in single aggregate query; disposed exclusion rule; filters/sorts; tests green
+- [x] Summary in single aggregate query; disposed exclusion rule; filters/sorts; tests green
 
 ## Required Tests
 1. CRUD + status transitions; 2. summary math incl. disposed exclusion; 3. filters
