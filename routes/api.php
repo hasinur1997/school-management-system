@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AdmissionController;
+use App\Http\Controllers\Api\V1\AnnualResultController;
 use App\Http\Controllers\Api\V1\AttendanceController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BranchController;
@@ -277,6 +278,17 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::get('exams/{exam}/results', [ResultController::class, 'index'])
             ->middleware('permission:result.view')
             ->name('exams.results.index');
+    });
+
+    // Annual results: 25/25/50 weighted generate/publish for a (session, class)
+    // tuple (result.generate). Branch isolation comes through the class (the
+    // tuple is validated branch-scoped) and the enrollment chain.
+    Route::middleware(['auth:sanctum', 'permission:result.generate'])->group(function () {
+        Route::post('annual-results/generate', [AnnualResultController::class, 'generate'])
+            ->name('annual-results.generate');
+
+        Route::post('annual-results/publish', [AnnualResultController::class, 'publish'])
+            ->name('annual-results.publish');
     });
 
     Route::middleware(['auth:sanctum', 'permission:branch.manage'])->group(function () {

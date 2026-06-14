@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 8 — Results |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 8.1 |
 | Blocks | 8.3, 8.4, Phase 9 |
 | Spec references | `docs/api/results.md`, schema → `annual_results` |
