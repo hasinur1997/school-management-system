@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 11 — Finance |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 10.5 (table exists from 10.3) |
 | Blocks | 11.2, 11.3 |
 | Spec references | `docs/api/finance.md`, schema → `categories` |
@@ -21,7 +21,7 @@ Request: `{ "name": "Utilities", "type": "expense" }` → 201. Duplicate (branch
 ### DELETE — in use by income/expense rows → 409 `{ "message": "Category is in use" }`.
 
 ## Success Criteria
-- [ ] Type filter; duplicate + in-use guards; seeder; tests green
+- [x] Type filter; duplicate + in-use guards; seeder; tests green
 
 ## Required Tests
 1. CRUD + duplicate 422; 2. delete-in-use 409; 3. filter type; branch isolation

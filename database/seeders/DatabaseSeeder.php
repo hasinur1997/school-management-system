@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             AcademicSessionSeeder::class,
             SchoolClassSeeder::class,
             GradingScaleSeeder::class,
+            CategorySeeder::class,
         ]);
 
         User::factory()->create([

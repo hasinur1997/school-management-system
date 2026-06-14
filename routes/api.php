@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\AnnualResultController;
 use App\Http\Controllers\Api\V1\AttendanceController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BranchController;
+use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CheckinIpController;
 use App\Http\Controllers\Api\V1\ClassController;
 use App\Http\Controllers\Api\V1\ExamController;
@@ -408,6 +409,18 @@ Route::prefix('v1')->name('v1.')->group(function () {
 
         Route::get('payments/{id}/receipt', [PaymentController::class, 'receipt'])
             ->name('payments.receipt');
+    });
+
+    // Categories (11.1): the shared income/expense category list. CRUD guarded
+    // by income.manage OR expense.manage (accountant work). Categories carry
+    // their own branch_id, so list/show are branch-isolated automatically and
+    // out-of-branch {category} bindings 404 via BranchScope. Deleting a category
+    // in use by income/expense rows → 409.
+    Route::middleware(['auth:sanctum', 'permission:income.manage|expense.manage'])->group(function () {
+        Route::get('categories', [CategoryController::class, 'index'])->name('categories.index');
+        Route::post('categories', [CategoryController::class, 'store'])->name('categories.store');
+        Route::put('categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
+        Route::delete('categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
     });
 
     Route::middleware(['auth:sanctum', 'permission:branch.manage'])->group(function () {
