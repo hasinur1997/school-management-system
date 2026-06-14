@@ -29,6 +29,10 @@ class TeacherAssignmentResource extends JsonResource
             'class_id' => $this->class_id,
             'section_id' => $this->section_id,
             'subject_id' => $this->subject_id,
+            'teacher' => $this->whenLoaded('teacher', fn (): array => [
+                'id' => $this->teacher->id,
+                'name' => $this->teacher->name,
+            ]),
             'class' => $this->whenLoaded('schoolClass', fn (): array => [
                 'id' => $this->schoolClass->id,
                 'name' => $this->schoolClass->name,

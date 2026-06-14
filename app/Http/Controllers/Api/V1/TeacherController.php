@@ -46,7 +46,10 @@ class TeacherController extends ApiController
      */
     public function store(StoreTeacherRequest $request): JsonResponse
     {
-        $teacher = $this->teachers->create($request->validated());
+        $teacher = $this->teachers->create(
+            $request->validated(),
+            $request->targetBranchId(),
+        );
 
         return $this->success(
             TeacherResource::make($teacher),

@@ -10,7 +10,6 @@ use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -24,13 +23,13 @@ class TeacherService
      *
      * @param  array<string, mixed>  $data
      */
-    public function create(array $data): Teacher
+    public function create(array $data, int $branchId): Teacher
     {
-        return DB::transaction(function () use ($data): Teacher {
+        return DB::transaction(function () use ($data, $branchId): Teacher {
             $password = Str::password(10);
 
             $user = User::create([
-                'branch_id' => Auth::user()->branch_id,
+                'branch_id' => $branchId,
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'phone' => $data['phone'],
@@ -40,8 +39,10 @@ class TeacherService
 
             $user->assignRole('teacher');
 
-            // branch_id is stamped from the creator by BelongsToBranch.
-            $teacher = Teacher::create([
+            // branch_id is guarded, and super admins bypass BranchScope's
+            // auto-stamping, so set the resolved branch explicitly (for branch
+            // users it matches their own).
+            $teacher = new Teacher([
                 'user_id' => $user->id,
                 'name' => $data['name'],
                 'email' => $data['email'],
@@ -50,6 +51,8 @@ class TeacherService
                 'joining_date' => $data['joining_date'] ?? null,
                 'status' => TeacherStatus::Active,
             ]);
+            $teacher->branch_id = $branchId;
+            $teacher->save();
 
             SendCredentials::dispatch($user, $password, 'Teacher')->afterCommit();
 

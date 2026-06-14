@@ -37,7 +37,14 @@ class UpdateSubjectRequest extends FormRequest
                     ->where('class_id', $subject->class_id)
                     ->ignore($subject),
             ],
-            'code' => ['nullable', 'string', 'max:20'],
+            'code' => [
+                'nullable',
+                'string',
+                'max:20',
+                Rule::unique('subjects', 'code')
+                    ->where('class_id', $subject->class_id)
+                    ->ignore($subject),
+            ],
             'full_marks' => ['sometimes', 'integer', 'between:1,32767'],
             'pass_marks' => ['sometimes', 'integer', 'between:0,32767'],
         ];

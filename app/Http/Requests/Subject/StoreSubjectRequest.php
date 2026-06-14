@@ -35,7 +35,12 @@ class StoreSubjectRequest extends FormRequest
                 'max:100',
                 Rule::unique('subjects', 'name')->where('class_id', $class->id),
             ],
-            'code' => ['nullable', 'string', 'max:20'],
+            'code' => [
+                'nullable',
+                'string',
+                'max:20',
+                Rule::unique('subjects', 'code')->where('class_id', $class->id),
+            ],
             'full_marks' => ['sometimes', 'integer', 'between:1,32767'],
             'pass_marks' => ['sometimes', 'integer', 'between:0,32767'],
         ];
