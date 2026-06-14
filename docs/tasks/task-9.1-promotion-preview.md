@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 9 — Promotion |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 8.4 |
 | Blocks | 9.2, 9.3 |
 | Spec references | `docs/api/promotions.md`, schema → `promotions` |
@@ -31,7 +31,7 @@ Before the one-click promote, admins see exactly who moves and who doesn't, with
 Failures: missing params 422; annual results not published for the class → 409 "Publish annual results first".
 
 ## Success Criteria
-- [ ] Reason taxonomy exact (failed/no_result/tc); next-class resolution incl. top-class null; published guard; single query set; tests green
+- [x] Reason taxonomy exact (failed/no_result/tc); next-class resolution incl. top-class null; published guard; single query set; tests green
 
 ## Required Tests
 1. mixed cohort preview (passed/failed/no-result/tc each appear correctly)

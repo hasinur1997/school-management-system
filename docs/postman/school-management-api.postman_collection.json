@@ -1,0 +1,1398 @@
+{
+  "info": {
+    "_postman_id": "b2f1a9c4-1d3e-4a5b-9c7d-school-mgmt-api",
+    "name": "School Management System API (v1)",
+    "description": "Complete Postman collection for the School Management System Laravel REST API.\n\nAll responses use the envelope `{ success, message, data }` (with `meta` on paginated lists).\n\n## Getting started\n1. Set the `base_url` collection variable (default `http://app-api.test`).\n2. Run **Auth > Login** — the test script auto-saves `{{token}}` for all authenticated requests.\n3. Update the various `*_id` collection variables to point at real records as you create them.\n\nAuthentication is Bearer token (Laravel Sanctum). Authorization is permission-based; the logged-in user must hold the relevant permission (e.g. `marks.entry`).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://app-api.test", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "branch_id", "value": "1", "type": "string" },
+    { "key": "session_id", "value": "1", "type": "string" },
+    { "key": "class_id", "value": "1", "type": "string" },
+    { "key": "section_id", "value": "1", "type": "string" },
+    { "key": "subject_id", "value": "1", "type": "string" },
+    { "key": "teacher_id", "value": "1", "type": "string" },
+    { "key": "teacher_assignment_id", "value": "1", "type": "string" },
+    { "key": "student_id", "value": "1", "type": "string" },
+    { "key": "parent_id", "value": "1", "type": "string" },
+    { "key": "admission_id", "value": "1", "type": "string" },
+    { "key": "application_no", "value": "ADM-2026-0001", "type": "string" },
+    { "key": "enrollment_id", "value": "1", "type": "string" },
+    { "key": "attendance_id", "value": "1", "type": "string" },
+    { "key": "teacher_attendance_id", "value": "1", "type": "string" },
+    { "key": "checkin_ip_id", "value": "1", "type": "string" },
+    { "key": "exam_id", "value": "1", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Public",
+      "item": [
+        {
+          "name": "Submit admission application",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/public/admissions", "host": ["{{base_url}}"], "path": ["api", "v1", "public", "admissions"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name_bn\": \"রহিম উদ্দিন\",\n  \"name_en\": \"Rahim Uddin\",\n  \"father_name_bn\": \"করিম উদ্দিন\",\n  \"father_name_en\": \"Karim Uddin\",\n  \"father_nid\": \"1234567890\",\n  \"mother_name_bn\": \"আমিনা বেগম\",\n  \"mother_name_en\": \"Amina Begum\",\n  \"mother_nid\": \"0987654321\",\n  \"present_village\": \"Sonapur\",\n  \"present_post_office\": \"Sonapur\",\n  \"present_upazila\": \"Sadar\",\n  \"present_district\": \"Dhaka\",\n  \"father_mobile\": \"01711000000\",\n  \"permanent_village_bn\": \"সোনাপুর\",\n  \"permanent_post_office_bn\": \"সোনাপুর\",\n  \"permanent_upazila_bn\": \"সদর\",\n  \"permanent_district_bn\": \"ঢাকা\",\n  \"mother_mobile\": \"01811000000\",\n  \"permanent_village_en\": \"Sonapur\",\n  \"permanent_post_office_en\": \"Sonapur\",\n  \"permanent_upazila_en\": \"Sadar\",\n  \"permanent_district_en\": \"Dhaka\",\n  \"birth_reg_no\": \"20100512345678901\",\n  \"date_of_birth\": \"2015-01-10\",\n  \"religion\": \"Islam\",\n  \"nationality\": \"Bangladeshi\",\n  \"caste\": null,\n  \"branch_id\": {{branch_id}},\n  \"desired_class_id\": {{class_id}}\n}"
+            },
+            "description": "Public, unauthenticated. Rate-limited to 10 requests/hour/IP. Creates an admission application in `pending` status."
+          },
+          "response": []
+        },
+        {
+          "name": "Check admission status",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/public/admissions/{{application_no}}/status?date_of_birth=2015-01-10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "public", "admissions", "{{application_no}}", "status"],
+              "query": [{ "key": "date_of_birth", "value": "2015-01-10" }]
+            },
+            "description": "Public status lookup. Requires the application_no plus the matching date_of_birth; any mismatch returns 404 (never reveals existence)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.data && res.data.token) {",
+                  "    pm.collectionVariables.set('token', res.data.token);",
+                  "    console.log('Saved token to {{token}}');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/auth/login", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"superadmin@example.com\",\n  \"password\": \"password\",\n  \"device_name\": \"postman\"\n}"
+            },
+            "description": "Throttled 5/min. `login` accepts email or phone. On success the test script stores the returned token in `{{token}}`."
+          },
+          "response": []
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/me", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "me"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Change password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/auth/change-password", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "change-password"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"password\",\n  \"password\": \"newpassword123\",\n  \"password_confirmation\": \"newpassword123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/logout", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "logout"] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Branches",
+      "item": [
+        {
+          "name": "List branches",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/branches?page=1&per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "branches"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "per_page", "value": "15" },
+                { "key": "is_active", "value": "true", "disabled": true },
+                { "key": "search", "value": "main", "disabled": true }
+              ]
+            },
+            "description": "Super admin only (permission `branch.manage`)."
+          },
+          "response": []
+        },
+        {
+          "name": "Create branch",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/branches", "host": ["{{base_url}}"], "path": ["api", "v1", "branches"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Main Campus\",\n  \"code\": \"MAIN\",\n  \"address\": \"123 School Road, Dhaka\",\n  \"phone\": \"029000000\",\n  \"email\": \"main@school.test\",\n  \"is_active\": true\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Show branch",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/branches/{{branch_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "branches", "{{branch_id}}"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Update branch",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/branches/{{branch_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "branches", "{{branch_id}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Main Campus (Updated)\",\n  \"code\": \"MAIN\",\n  \"address\": \"123 School Road, Dhaka\",\n  \"phone\": \"029000001\",\n  \"email\": \"main@school.test\",\n  \"is_active\": true\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete branch",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/branches/{{branch_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "branches", "{{branch_id}}"] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Academic Sessions",
+      "item": [
+        {
+          "name": "List sessions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/sessions", "host": ["{{base_url}}"], "path": ["api", "v1", "sessions"] },
+            "description": "Permission `session.manage`."
+          },
+          "response": []
+        },
+        {
+          "name": "Create session",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/sessions", "host": ["{{base_url}}"], "path": ["api", "v1", "sessions"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"2026\",\n  \"start_date\": \"2026-01-01\",\n  \"end_date\": \"2026-12-31\",\n  \"is_current\": true\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Show session",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/sessions/{{session_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "sessions", "{{session_id}}"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Update session",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/sessions/{{session_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "sessions", "{{session_id}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"2026\",\n  \"start_date\": \"2026-01-01\",\n  \"end_date\": \"2026-12-31\",\n  \"is_current\": true\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete session",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/sessions/{{session_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "sessions", "{{session_id}}"] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Classes & Sections",
+      "item": [
+        {
+          "name": "List classes",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/classes", "host": ["{{base_url}}"], "path": ["api", "v1", "classes"] },
+            "description": "Reads open to any authenticated user."
+          },
+          "response": []
+        },
+        {
+          "name": "Create class",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/classes", "host": ["{{base_url}}"], "path": ["api", "v1", "classes"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Class One\",\n  \"numeric_level\": 1,\n  \"branch_id\": {{branch_id}}\n}"
+            },
+            "description": "Permission `class.manage`. `branch_id` is required only for super admins; other users have it stamped from their own branch."
+          },
+          "response": []
+        },
+        {
+          "name": "Show class",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/classes/{{class_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "classes", "{{class_id}}"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Update class",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/classes/{{class_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "classes", "{{class_id}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Class One\",\n  \"numeric_level\": 1,\n  \"branch_id\": {{branch_id}}\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete class",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/classes/{{class_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "classes", "{{class_id}}"] }
+          },
+          "response": []
+        },
+        {
+          "name": "List sections of class",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/classes/{{class_id}}/sections", "host": ["{{base_url}}"], "path": ["api", "v1", "classes", "{{class_id}}", "sections"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Create section",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/classes/{{class_id}}/sections", "host": ["{{base_url}}"], "path": ["api", "v1", "classes", "{{class_id}}", "sections"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"A\"\n}" }
+          },
+          "response": []
+        },
+        {
+          "name": "Show section",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/sections/{{section_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "sections", "{{section_id}}"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Update section",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/sections/{{section_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "sections", "{{section_id}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"B\"\n}" }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete section",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/sections/{{section_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "sections", "{{section_id}}"] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Subjects",
+      "item": [
+        {
+          "name": "List subjects of class",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/classes/{{class_id}}/subjects", "host": ["{{base_url}}"], "path": ["api", "v1", "classes", "{{class_id}}", "subjects"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Create subject",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/classes/{{class_id}}/subjects", "host": ["{{base_url}}"], "path": ["api", "v1", "classes", "{{class_id}}", "subjects"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mathematics\",\n  \"code\": \"MATH\",\n  \"full_marks\": 100,\n  \"pass_marks\": 33\n}"
+            },
+            "description": "Permission `subject.manage`. pass_marks must be < full_marks."
+          },
+          "response": []
+        },
+        {
+          "name": "Show subject",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/subjects/{{subject_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "subjects", "{{subject_id}}"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Update subject",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/subjects/{{subject_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "subjects", "{{subject_id}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mathematics\",\n  \"code\": \"MATH\",\n  \"full_marks\": 100,\n  \"pass_marks\": 40\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete subject",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/subjects/{{subject_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "subjects", "{{subject_id}}"] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Teachers",
+      "item": [
+        {
+          "name": "List teachers",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/teachers?per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "teachers"],
+              "query": [
+                { "key": "per_page", "value": "15" },
+                { "key": "search", "value": "rahim", "disabled": true },
+                { "key": "status", "value": "active", "disabled": true }
+              ]
+            },
+            "description": "Permission `teacher.view`."
+          },
+          "response": []
+        },
+        {
+          "name": "Create teacher",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/teachers", "host": ["{{base_url}}"], "path": ["api", "v1", "teachers"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mr. Karim\",\n  \"email\": \"karim.teacher@school.test\",\n  \"phone\": \"01710000001\",\n  \"designation\": \"Senior Teacher\",\n  \"joining_date\": \"2026-01-05\"\n}"
+            },
+            "description": "Permission `teacher.create`. Creates the login + profile in one transaction and emails credentials (queued)."
+          },
+          "response": []
+        },
+        {
+          "name": "Show teacher",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/teachers/{{teacher_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "teachers", "{{teacher_id}}"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Update teacher",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/teachers/{{teacher_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "teachers", "{{teacher_id}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mr. Karim Uddin\",\n  \"phone\": \"01710000001\",\n  \"designation\": \"Head Teacher\",\n  \"joining_date\": \"2026-01-05\"\n}"
+            },
+            "description": "Permission `teacher.update`. `email` is immutable (prohibited)."
+          },
+          "response": []
+        },
+        {
+          "name": "Update teacher status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/teachers/{{teacher_id}}/status", "host": ["{{base_url}}"], "path": ["api", "v1", "teachers", "{{teacher_id}}", "status"] },
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"inactive\"\n}" },
+            "description": "status: active | inactive."
+          },
+          "response": []
+        },
+        {
+          "name": "Upload teacher photo",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/teachers/{{teacher_id}}/photo", "host": ["{{base_url}}"], "path": ["api", "v1", "teachers", "{{teacher_id}}", "photo"] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "photo", "type": "file", "src": [] }]
+            },
+            "description": "Multipart upload. Attach an image file under the `photo` key."
+          },
+          "response": []
+        },
+        {
+          "name": "Resend credentials",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/teachers/{{teacher_id}}/resend-credentials", "host": ["{{base_url}}"], "path": ["api", "v1", "teachers", "{{teacher_id}}", "resend-credentials"] },
+            "description": "Permission `teacher.create`. Regenerates the password and re-queues the credentials email."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Teacher Assignments",
+      "item": [
+        {
+          "name": "List assignments",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/teacher-assignments?per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "teacher-assignments"],
+              "query": [
+                { "key": "per_page", "value": "15" },
+                { "key": "teacher_id", "value": "1", "disabled": true },
+                { "key": "class_id", "value": "1", "disabled": true },
+                { "key": "session_id", "value": "1", "disabled": true }
+              ]
+            },
+            "description": "Permission `teacher.update`."
+          },
+          "response": []
+        },
+        {
+          "name": "Create assignment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/teacher-assignments", "host": ["{{base_url}}"], "path": ["api", "v1", "teacher-assignments"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"teacher_id\": {{teacher_id}},\n  \"session_id\": {{session_id}},\n  \"class_id\": {{class_id}},\n  \"section_id\": {{section_id}},\n  \"subject_id\": {{subject_id}}\n}"
+            },
+            "description": "section_id and subject_id are nullable."
+          },
+          "response": []
+        },
+        {
+          "name": "Show assignment",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/teacher-assignments/{{teacher_assignment_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "teacher-assignments", "{{teacher_assignment_id}}"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Update assignment",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/teacher-assignments/{{teacher_assignment_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "teacher-assignments", "{{teacher_assignment_id}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"teacher_id\": {{teacher_id}},\n  \"session_id\": {{session_id}},\n  \"class_id\": {{class_id}},\n  \"section_id\": {{section_id}},\n  \"subject_id\": {{subject_id}}\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete assignment",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/teacher-assignments/{{teacher_assignment_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "teacher-assignments", "{{teacher_assignment_id}}"] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admissions (Admin)",
+      "item": [
+        {
+          "name": "List admissions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admissions?per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admissions"],
+              "query": [
+                { "key": "per_page", "value": "15" },
+                { "key": "status", "value": "pending", "disabled": true },
+                { "key": "class_id", "value": "1", "disabled": true },
+                { "key": "search", "value": "rahim", "disabled": true }
+              ]
+            },
+            "description": "Permission `admission.view`."
+          },
+          "response": []
+        },
+        {
+          "name": "Show admission",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/admissions/{{admission_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "admissions", "{{admission_id}}"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Approve admission",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/admissions/{{admission_id}}/approve", "host": ["{{base_url}}"], "path": ["api", "v1", "admissions", "{{admission_id}}", "approve"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": {{session_id}},\n  \"class_id\": {{class_id}},\n  \"section_id\": {{section_id}},\n  \"roll_no\": 1,\n  \"admission_no\": null,\n  \"create_parent_account\": true,\n  \"parent_relation\": \"father\"\n}"
+            },
+            "description": "Permission `admission.approve`. Creates the student + enrollment (+ optional parent account) in one transaction. `parent_relation` required when create_parent_account is true."
+          },
+          "response": []
+        },
+        {
+          "name": "Reject admission",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/admissions/{{admission_id}}/reject", "host": ["{{base_url}}"], "path": ["api", "v1", "admissions", "{{admission_id}}", "reject"] },
+            "body": { "mode": "raw", "raw": "{\n  \"rejection_reason\": \"Incomplete documents\"\n}" }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Students",
+      "item": [
+        {
+          "name": "List students",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/students?per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "students"],
+              "query": [
+                { "key": "per_page", "value": "15" },
+                { "key": "class_id", "value": "1", "disabled": true },
+                { "key": "section_id", "value": "1", "disabled": true },
+                { "key": "session_id", "value": "1", "disabled": true },
+                { "key": "search", "value": "rahim", "disabled": true }
+              ]
+            },
+            "description": "Permission `student.view`."
+          },
+          "response": []
+        },
+        {
+          "name": "Show student",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/students/{{student_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "students", "{{student_id}}"] },
+            "description": "Authorized via StudentPolicy — staff or the student itself. Out-of-reach records return 404."
+          },
+          "response": []
+        },
+        {
+          "name": "Student enrollment history",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/students/{{student_id}}/enrollments", "host": ["{{base_url}}"], "path": ["api", "v1", "students", "{{student_id}}", "enrollments"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Update student",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/students/{{student_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "students", "{{student_id}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name_bn\": \"রহিম উদ্দিন\",\n  \"name_en\": \"Rahim Uddin\",\n  \"father_name_bn\": \"করিম উদ্দিন\",\n  \"father_name_en\": \"Karim Uddin\",\n  \"father_nid\": \"1234567890\",\n  \"mother_name_bn\": \"আমিনা বেগম\",\n  \"mother_name_en\": \"Amina Begum\",\n  \"mother_nid\": \"0987654321\",\n  \"present_village\": \"Sonapur\",\n  \"present_post_office\": \"Sonapur\",\n  \"present_upazila\": \"Sadar\",\n  \"present_district\": \"Dhaka\",\n  \"permanent_village_bn\": \"সোনাপুর\",\n  \"permanent_post_office_bn\": \"সোনাপুর\",\n  \"permanent_upazila_bn\": \"সদর\",\n  \"permanent_district_bn\": \"ঢাকা\",\n  \"permanent_village_en\": \"Sonapur\",\n  \"permanent_post_office_en\": \"Sonapur\",\n  \"permanent_upazila_en\": \"Sadar\",\n  \"permanent_district_en\": \"Dhaka\",\n  \"father_mobile\": \"01711000000\",\n  \"mother_mobile\": \"01811000000\",\n  \"date_of_birth\": \"2015-01-10\",\n  \"religion\": \"Islam\",\n  \"nationality\": \"Bangladeshi\",\n  \"caste\": null\n}"
+            },
+            "description": "Permission `student.update`. `admission_no` and `birth_reg_no` are immutable (prohibited)."
+          },
+          "response": []
+        },
+        {
+          "name": "Update student status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/students/{{student_id}}/status", "host": ["{{base_url}}"], "path": ["api", "v1", "students", "{{student_id}}", "status"] },
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"inactive\"\n}" },
+            "description": "status: active | inactive. Use the TC module for transfer certificates (tc status blocked here)."
+          },
+          "response": []
+        },
+        {
+          "name": "Upload student photo",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/students/{{student_id}}/photo", "host": ["{{base_url}}"], "path": ["api", "v1", "students", "{{student_id}}", "photo"] },
+            "body": { "mode": "formdata", "formdata": [{ "key": "photo", "type": "file", "src": [] }] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Parents",
+      "item": [
+        {
+          "name": "List parents",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/parents?per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "parents"],
+              "query": [{ "key": "per_page", "value": "15" }]
+            },
+            "description": "Permission `parent.manage`."
+          },
+          "response": []
+        },
+        {
+          "name": "Create parent",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/parents", "host": ["{{base_url}}"], "path": ["api", "v1", "parents"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Karim Uddin\",\n  \"phone\": \"01711000000\",\n  \"email\": \"karim.parent@school.test\",\n  \"relation\": \"father\",\n  \"student_ids\": [{{student_id}}]\n}"
+            },
+            "description": "relation: father | mother | guardian."
+          },
+          "response": []
+        },
+        {
+          "name": "Link student to parent",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/parents/{{parent_id}}/students", "host": ["{{base_url}}"], "path": ["api", "v1", "parents", "{{parent_id}}", "students"] },
+            "body": { "mode": "raw", "raw": "{\n  \"student_id\": {{student_id}}\n}" }
+          },
+          "response": []
+        },
+        {
+          "name": "Unlink student from parent",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/parents/{{parent_id}}/students/{{student_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "parents", "{{parent_id}}", "students", "{{student_id}}"] }
+          },
+          "response": []
+        },
+        {
+          "name": "My students (parent self-service)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/me/students", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "students"] },
+            "description": "Parent role only. Lists the caller's linked children."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Student Attendance",
+      "item": [
+        {
+          "name": "Attendance sheet",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/attendance/sheet?class_id={{class_id}}&section_id={{section_id}}&date=2026-06-14",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "attendance", "sheet"],
+              "query": [
+                { "key": "class_id", "value": "{{class_id}}" },
+                { "key": "section_id", "value": "{{section_id}}" },
+                { "key": "date", "value": "2026-06-14" }
+              ]
+            },
+            "description": "Permission `attendance.create`. Returns the roster + any already-saved statuses for the date."
+          },
+          "response": []
+        },
+        {
+          "name": "Save attendance (bulk)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/attendance", "host": ["{{base_url}}"], "path": ["api", "v1", "attendance"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"section_id\": {{section_id}},\n  \"date\": \"2026-06-14\",\n  \"records\": [\n    { \"enrollment_id\": {{enrollment_id}}, \"status\": \"present\" },\n    { \"enrollment_id\": 2, \"status\": \"absent\" },\n    { \"enrollment_id\": 3, \"status\": \"late\" }\n  ]\n}"
+            },
+            "description": "status: present | absent | late | leave. Future dates rejected. Bulk upsert."
+          },
+          "response": []
+        },
+        {
+          "name": "List attendance",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/attendance?date=2026-06-14&per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "attendance"],
+              "query": [
+                { "key": "class_id", "value": "1", "disabled": true },
+                { "key": "section_id", "value": "1", "disabled": true },
+                { "key": "date", "value": "2026-06-14" },
+                { "key": "status", "value": "absent", "disabled": true },
+                { "key": "per_page", "value": "15" }
+              ]
+            },
+            "description": "Permission `attendance.view`."
+          },
+          "response": []
+        },
+        {
+          "name": "Update attendance record",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/attendance/{{attendance_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "attendance", "{{attendance_id}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"present\"\n}" },
+            "description": "Permission `attendance.update`."
+          },
+          "response": []
+        },
+        {
+          "name": "Student monthly attendance",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/students/{{student_id}}/attendance?month=6&year=2026",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "students", "{{student_id}}", "attendance"],
+              "query": [
+                { "key": "month", "value": "6" },
+                { "key": "year", "value": "2026" }
+              ]
+            },
+            "description": "Authorized via StudentPolicy (staff / self / linked parent)."
+          },
+          "response": []
+        },
+        {
+          "name": "My monthly attendance (student)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/me/attendance?month=6&year=2026",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "me", "attendance"],
+              "query": [
+                { "key": "month", "value": "6" },
+                { "key": "year", "value": "2026" }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Teacher Attendance",
+      "item": [
+        {
+          "name": "Check in (teacher)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/teacher-attendance/check-in", "host": ["{{base_url}}"], "path": ["api", "v1", "teacher-attendance", "check-in"] },
+            "description": "Teacher role only. The request IP is matched against the branch whitelist."
+          },
+          "response": []
+        },
+        {
+          "name": "Check out (teacher)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/teacher-attendance/check-out", "host": ["{{base_url}}"], "path": ["api", "v1", "teacher-attendance", "check-out"] },
+            "description": "Teacher role only."
+          },
+          "response": []
+        },
+        {
+          "name": "My teacher attendance",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/me/teacher-attendance?month=6&year=2026",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "me", "teacher-attendance"],
+              "query": [
+                { "key": "month", "value": "6" },
+                { "key": "year", "value": "2026" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List teacher attendance (admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/teacher-attendance?month=6&year=2026&per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "teacher-attendance"],
+              "query": [
+                { "key": "teacher_id", "value": "1", "disabled": true },
+                { "key": "date", "value": "2026-06-14", "disabled": true },
+                { "key": "month", "value": "6" },
+                { "key": "year", "value": "2026" },
+                { "key": "status", "value": "present", "disabled": true },
+                { "key": "per_page", "value": "15" }
+              ]
+            },
+            "description": "Permission `teacher_attendance.view`."
+          },
+          "response": []
+        },
+        {
+          "name": "Correct teacher attendance (admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/teacher-attendance/{{teacher_attendance_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "teacher-attendance", "{{teacher_attendance_id}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"present\",\n  \"check_in_at\": \"2026-06-14 09:00:00\",\n  \"check_out_at\": \"2026-06-14 16:30:00\"\n}"
+            },
+            "description": "Permission `teacher_attendance.manage`. check_out must be after check_in."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Check-in IP Whitelist",
+      "item": [
+        {
+          "name": "List whitelist entries",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/checkin-ips", "host": ["{{base_url}}"], "path": ["api", "v1", "checkin-ips"] },
+            "description": "Permission `teacher_attendance.manage`."
+          },
+          "response": []
+        },
+        {
+          "name": "Create whitelist entry",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/checkin-ips", "host": ["{{base_url}}"], "path": ["api", "v1", "checkin-ips"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ip_address\": \"203.0.113.0/24\",\n  \"label\": \"Campus WiFi\",\n  \"is_active\": true,\n  \"branch_id\": {{branch_id}}\n}"
+            },
+            "description": "ip_address accepts a single IP or CIDR. branch_id required only for super admins."
+          },
+          "response": []
+        },
+        {
+          "name": "Update whitelist entry",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/checkin-ips/{{checkin_ip_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "checkin-ips", "{{checkin_ip_id}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ip_address\": \"203.0.113.5\",\n  \"label\": \"Front Office\",\n  \"is_active\": true\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete whitelist entry",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/checkin-ips/{{checkin_ip_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "checkin-ips", "{{checkin_ip_id}}"] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Grading Scale",
+      "item": [
+        {
+          "name": "Get grading scale",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/grading-scales", "host": ["{{base_url}}"], "path": ["api", "v1", "grading-scales"] },
+            "description": "Open to any authenticated user (cached)."
+          },
+          "response": []
+        },
+        {
+          "name": "Replace grading scale",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/grading-scales", "host": ["{{base_url}}"], "path": ["api", "v1", "grading-scales"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scale\": [\n    { \"grade\": \"A+\", \"min_marks\": 80, \"max_marks\": 100, \"grade_point\": 5.00, \"is_fail\": false },\n    { \"grade\": \"A\",  \"min_marks\": 70, \"max_marks\": 79,  \"grade_point\": 4.00, \"is_fail\": false },\n    { \"grade\": \"A-\", \"min_marks\": 60, \"max_marks\": 69,  \"grade_point\": 3.50, \"is_fail\": false },\n    { \"grade\": \"B\",  \"min_marks\": 50, \"max_marks\": 59,  \"grade_point\": 3.00, \"is_fail\": false },\n    { \"grade\": \"C\",  \"min_marks\": 40, \"max_marks\": 49,  \"grade_point\": 2.00, \"is_fail\": false },\n    { \"grade\": \"D\",  \"min_marks\": 33, \"max_marks\": 39,  \"grade_point\": 1.00, \"is_fail\": false },\n    { \"grade\": \"F\",  \"min_marks\": 0,  \"max_marks\": 32,  \"grade_point\": 0.00, \"is_fail\": true }\n  ]\n}"
+            },
+            "description": "Permission `setting.manage`. Full replace. Bands must cover 0-100 with no gaps/overlaps, descending grade points, exactly one failing band."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Exams",
+      "item": [
+        {
+          "name": "List exams",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/exams?per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "exams"],
+              "query": [
+                { "key": "per_page", "value": "15" },
+                { "key": "session_id", "value": "1", "disabled": true },
+                { "key": "class_id", "value": "1", "disabled": true },
+                { "key": "type", "value": "final", "disabled": true },
+                { "key": "status", "value": "upcoming", "disabled": true }
+              ]
+            },
+            "description": "Permission `exam.view`."
+          },
+          "response": []
+        },
+        {
+          "name": "Create exam",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/exams", "host": ["{{base_url}}"], "path": ["api", "v1", "exams"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": {{session_id}},\n  \"class_id\": {{class_id}},\n  \"type\": \"semester_1\",\n  \"name\": \"First Semester Exam 2026\",\n  \"start_date\": \"2026-06-01\",\n  \"end_date\": \"2026-06-10\"\n}"
+            },
+            "description": "Permission `exam.manage`. type: semester_1 | semester_2 | final (see ExamType enum). One exam per (session, class, type)."
+          },
+          "response": []
+        },
+        {
+          "name": "Show exam",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/exams/{{exam_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "exams", "{{exam_id}}"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Update exam",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/exams/{{exam_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "exams", "{{exam_id}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"First Semester Exam 2026 (Revised)\",\n  \"start_date\": \"2026-06-02\",\n  \"end_date\": \"2026-06-11\",\n  \"status\": \"ongoing\"\n}"
+            },
+            "description": "Permission `exam.manage`. session_id/class_id/type immutable. status advances forward only (upcoming->ongoing->completed); publishing has its own flow. Published exams return 409."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Marks",
+      "item": [
+        {
+          "name": "Marks entry sheet",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/exams/{{exam_id}}/marks/sheet?subject_id={{subject_id}}&section_id={{section_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "exams", "{{exam_id}}", "marks", "sheet"],
+              "query": [
+                { "key": "subject_id", "value": "{{subject_id}}" },
+                { "key": "section_id", "value": "{{section_id}}" }
+              ]
+            },
+            "description": "Permission `marks.entry`."
+          },
+          "response": []
+        },
+        {
+          "name": "Save marks (bulk)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/exams/{{exam_id}}/marks", "host": ["{{base_url}}"], "path": ["api", "v1", "exams", "{{exam_id}}", "marks"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subject_id\": {{subject_id}},\n  \"marks\": [\n    { \"enrollment_id\": {{enrollment_id}}, \"obtained_marks\": 85 },\n    { \"enrollment_id\": 2, \"obtained_marks\": 72 },\n    { \"enrollment_id\": 3, \"obtained_marks\": 30 }\n  ]\n}"
+            },
+            "description": "Permission `marks.entry`. obtained_marks must be 0..subject.full_marks. Published exams are frozen (409)."
+          },
+          "response": []
+        },
+        {
+          "name": "List marks",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/exams/{{exam_id}}/marks?per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "exams", "{{exam_id}}", "marks"],
+              "query": [
+                { "key": "per_page", "value": "15" },
+                { "key": "subject_id", "value": "1", "disabled": true },
+                { "key": "section_id", "value": "1", "disabled": true }
+              ]
+            },
+            "description": "Permission `marks.view`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Results",
+      "item": [
+        {
+          "name": "Generate exam results",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/exams/{{exam_id}}/results/generate", "host": ["{{base_url}}"], "path": ["api", "v1", "exams", "{{exam_id}}", "results", "generate"] },
+            "description": "Permission `result.generate`. Computes per-student results from saved marks."
+          },
+          "response": []
+        },
+        {
+          "name": "Publish exam results",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/exams/{{exam_id}}/results/publish", "host": ["{{base_url}}"], "path": ["api", "v1", "exams", "{{exam_id}}", "results", "publish"] },
+            "description": "Permission `result.generate`. Published results are immutable."
+          },
+          "response": []
+        },
+        {
+          "name": "List exam results",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/exams/{{exam_id}}/results?per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "exams", "{{exam_id}}", "results"],
+              "query": [
+                { "key": "per_page", "value": "15" },
+                { "key": "section_id", "value": "1", "disabled": true },
+                { "key": "is_passed", "value": "true", "disabled": true }
+              ]
+            },
+            "description": "Permission `result.view`."
+          },
+          "response": []
+        },
+        {
+          "name": "Generate annual results",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/annual-results/generate", "host": ["{{base_url}}"], "path": ["api", "v1", "annual-results", "generate"] },
+            "body": { "mode": "raw", "raw": "{\n  \"session_id\": {{session_id}},\n  \"class_id\": {{class_id}}\n}" },
+            "description": "Permission `result.generate`. Annual GPA = 0.25*S1 + 0.25*S2 + 0.50*Final."
+          },
+          "response": []
+        },
+        {
+          "name": "Publish annual results",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/annual-results/publish", "host": ["{{base_url}}"], "path": ["api", "v1", "annual-results", "publish"] },
+            "body": { "mode": "raw", "raw": "{\n  \"session_id\": {{session_id}},\n  \"class_id\": {{class_id}}\n}" }
+          },
+          "response": []
+        },
+        {
+          "name": "Search results (staff)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/results/search?session_id={{session_id}}&class_id={{class_id}}&section_id={{section_id}}&roll_no=1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "results", "search"],
+              "query": [
+                { "key": "admission_no", "value": "STD-2026-0001", "disabled": true },
+                { "key": "session_id", "value": "{{session_id}}" },
+                { "key": "class_id", "value": "{{class_id}}" },
+                { "key": "section_id", "value": "{{section_id}}" },
+                { "key": "roll_no", "value": "1" }
+              ]
+            },
+            "description": "Permission `result.view`. Provide EITHER admission_no OR all of session_id+class_id+section_id+roll_no."
+          },
+          "response": []
+        },
+        {
+          "name": "Enrollment results",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/enrollments/{{enrollment_id}}/results", "host": ["{{base_url}}"], "path": ["api", "v1", "enrollments", "{{enrollment_id}}", "results"] },
+            "description": "Authorized via StudentPolicy (staff / self / linked parent)."
+          },
+          "response": []
+        },
+        {
+          "name": "My results (student/parent)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/me/results?session_id={{session_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "me", "results"],
+              "query": [
+                { "key": "session_id", "value": "{{session_id}}" },
+                { "key": "student_id", "value": "1", "disabled": true }
+              ]
+            },
+            "description": "Self-service. Students/parents see their own published results. `student_id` lets a parent pick a specific child."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

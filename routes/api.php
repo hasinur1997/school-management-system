@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\ExamController;
 use App\Http\Controllers\Api\V1\GradingScaleController;
 use App\Http\Controllers\Api\V1\MarkController;
 use App\Http\Controllers\Api\V1\ParentController;
+use App\Http\Controllers\Api\V1\PromotionController;
 use App\Http\Controllers\Api\V1\PublicAdmissionController;
 use App\Http\Controllers\Api\V1\ResultController;
 use App\Http\Controllers\Api\V1\SectionController;
@@ -307,6 +308,19 @@ Route::prefix('v1')->name('v1.')->group(function () {
 
         Route::get('me/results', [ResultController::class, 'meResults'])
             ->name('me.results');
+    });
+
+    // Promotion preview (9.1): who moves up for a (session, class) and the
+    // resolved next class. Branch isolation comes through the class (validated
+    // branch-scoped) and the enrollment → student chain.
+    Route::middleware(['auth:sanctum', 'permission:promotion.execute'])->group(function () {
+        Route::get('promotions/preview', [PromotionController::class, 'preview'])
+            ->name('promotions.preview');
+
+        // Bulk promote (9.2): close the class's old enrollments and open the new
+        // session's in one transaction. Passed → next class, failed → same class.
+        Route::post('promotions/bulk', [PromotionController::class, 'bulk'])
+            ->name('promotions.bulk');
     });
 
     Route::middleware(['auth:sanctum', 'permission:branch.manage'])->group(function () {
