@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 7 — Exams & Marks |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 7.1 |
 | Blocks | 7.3, Phase 8 |
 | Spec references | `docs/api/exams-marks.md`, schema → `exams` |
@@ -25,7 +25,7 @@ Success — 201 exam. Failures: duplicate (session,class,type) → 422 "This exa
 ### PUT /exams/{id} — name/dates/status only; editing published exam → 409 `{ "message": "Published exams cannot be modified" }`; status regression (completed → ongoing) → 422.
 
 ## Success Criteria
-- [ ] Uniqueness + immutability rules + status transition guard; filters; tests green
+- [x] Uniqueness + immutability rules + status transition guard; filters; tests green
 
 ## Required Tests
 1. create happy + duplicate 422; 2. update name ok; type change rejected; 3. published 409; regression 422; 4. filters
