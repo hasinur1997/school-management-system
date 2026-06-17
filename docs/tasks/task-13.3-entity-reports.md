@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 13 — Reports |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 13.2 |
 | Blocks | 13.4 |
 | Spec references | `docs/api/reports.md` |
@@ -31,7 +31,7 @@ Remaining four reports, same filter + envelope conventions.
 All: 422 filter errors; 403 without report.view.
 
 ## Success Criteria
-- [ ] All aggregates SQL-side; fees math reconciles with invoices/payments fixtures; tests green
+- [x] All aggregates SQL-side; fees math reconciles with invoices/payments fixtures; tests green
 
 ## Required Tests
 1. each report vs fixtures; 2. fees outstanding = invoiced − collected; 3. range edges (admission on boundary date counted)

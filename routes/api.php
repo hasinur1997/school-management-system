@@ -502,6 +502,16 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::get('reports/income', [ReportController::class, 'income'])->name('reports.income');
         Route::get('reports/expense', [ReportController::class, 'expense'])->name('reports.expense');
         Route::get('reports/profit-loss', [ReportController::class, 'profitLoss'])->name('reports.profit-loss');
+
+        // Entity reports (13.3): students / teachers / assets / fees, same
+        // filter + SQL-aggregation conventions. Fees figures (invoiced from
+        // invoice amounts, collected from paid_amount) reconcile with the
+        // invoice/payment fixtures; asset total_value follows the 11.4 rule
+        // (in_use + damaged, disposed excluded).
+        Route::get('reports/students', [ReportController::class, 'students'])->name('reports.students');
+        Route::get('reports/teachers', [ReportController::class, 'teachers'])->name('reports.teachers');
+        Route::get('reports/assets', [ReportController::class, 'assets'])->name('reports.assets');
+        Route::get('reports/fees', [ReportController::class, 'fees'])->name('reports.fees');
     });
 
     Route::middleware(['auth:sanctum', 'permission:branch.manage'])->group(function () {
