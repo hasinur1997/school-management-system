@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 13 — Reports |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 13.1 |
 | Blocks | 13.4 |
 | Spec references | `docs/api/reports.md` |
@@ -28,7 +28,7 @@ Three endpoints (`report.view`) — pure SQL aggregation, shared shape.
 Failures: filter 422s per 13.1; teacher without report.view → 403.
 
 ## Success Criteria
-- [ ] Zero PHP-side summation (query log assertion of GROUP BY); fee incomes included; series granularity switch at 62 days; tests green
+- [x] Zero PHP-side summation (query log assertion of GROUP BY); fee incomes included; series granularity switch at 62 days; tests green
 
 ## Required Tests
 1. totals + category breakdown vs seeded fixtures (incl. system fee income)

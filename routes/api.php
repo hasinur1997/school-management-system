@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\V1\ParentController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PromotionController;
 use App\Http\Controllers\Api\V1\PublicAdmissionController;
+use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\ResultController;
 use App\Http\Controllers\Api\V1\SectionController;
 use App\Http\Controllers\Api\V1\SessionController;
@@ -491,6 +492,16 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::post('assets', [AssetController::class, 'store'])->name('assets.store');
         Route::put('assets/{asset}', [AssetController::class, 'update'])->name('assets.update');
         Route::delete('assets/{asset}', [AssetController::class, 'destroy'])->name('assets.destroy');
+    });
+
+    // Finance reports (13.2): income / expense / profit-loss, all SQL-aggregated
+    // over the shared report filter (period/from/to + super-admin branch_id,
+    // `all` = consolidated). Guarded by report.view. Series granularity switches
+    // from daily to monthly at 62 days; consolidated views add a by_branch list.
+    Route::middleware(['auth:sanctum', 'permission:report.view'])->group(function () {
+        Route::get('reports/income', [ReportController::class, 'income'])->name('reports.income');
+        Route::get('reports/expense', [ReportController::class, 'expense'])->name('reports.expense');
+        Route::get('reports/profit-loss', [ReportController::class, 'profitLoss'])->name('reports.profit-loss');
     });
 
     Route::middleware(['auth:sanctum', 'permission:branch.manage'])->group(function () {
