@@ -121,4 +121,13 @@ class Student extends Model implements HasMedia
     {
         return $this->belongsToMany(ParentProfile::class, 'parent_student', 'student_id', 'parent_id');
     }
+
+    /**
+     * Get the student's transfer certificate, if one has been issued (at most
+     * one — the student_id column is unique).
+     */
+    public function transferCertificate(): HasOne
+    {
+        return $this->hasOne(TransferCertificate::class);
+    }
 }

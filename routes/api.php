@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\V1\SubjectController;
 use App\Http\Controllers\Api\V1\TeacherAssignmentController;
 use App\Http\Controllers\Api\V1\TeacherAttendanceController;
 use App\Http\Controllers\Api\V1\TeacherController;
+use App\Http\Controllers\Api\V1\TransferCertificateController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('v1.')->group(function () {
@@ -171,6 +172,19 @@ Route::prefix('v1')->name('v1.')->group(function () {
                 ->name('id-cards.batch.status');
             Route::get('id-cards/batch/{batch}/download', [IdCardController::class, 'download'])
                 ->name('id-cards.batch.download');
+        });
+
+        // Transfer certificates (12.3): issuing retires a student (status → tc)
+        // and stores the one persisted legal PDF. Out-of-branch {student}/{tc}
+        // ids 404 via BranchScope binding.
+        Route::post('students/{student}/tc', [TransferCertificateController::class, 'store'])
+            ->middleware('permission:tc.issue')
+            ->name('students.tc');
+
+        Route::middleware('permission:tc.view')->group(function () {
+            Route::get('tcs', [TransferCertificateController::class, 'index'])->name('tcs.index');
+            Route::get('tcs/{tc}', [TransferCertificateController::class, 'show'])->name('tcs.show');
+            Route::get('tcs/{tc}/pdf', [TransferCertificateController::class, 'pdf'])->name('tcs.pdf');
         });
     });
 

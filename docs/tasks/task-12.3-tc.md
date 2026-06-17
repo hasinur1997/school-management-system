@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 12 — Documents |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 12.1 |
 | Blocks | — |
 | Spec references | `docs/api/documents.md`, schema → `transfer_certificates`, invariant 6 |
@@ -29,9 +29,9 @@ Failures: TC already issued → 409 "Transfer certificate already issued"; empty
 ### GET /tcs/{id}/pdf — 200 stored pdf; missing file → 500 logged.
 
 ## Success Criteria
-- [ ] Atomic issue (rollback test); stored PDF exists; statuses flipped
-- [ ] Exclusion proven in three modules (roster, generation, preview)
-- [ ] One TC per student; tests green
+- [x] Atomic issue (rollback test); stored PDF exists; statuses flipped
+- [x] Exclusion proven in three modules (roster, generation, preview)
+- [x] One TC per student; tests green
 
 ## Required Tests
 1. issue happy: row+statuses+media; rollback on induced failure
