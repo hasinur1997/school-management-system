@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 13 — Reports |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 12.3 |
 | Blocks | 13.2–13.4 |
 | Spec references | `docs/api/reports.md` |
@@ -22,7 +22,7 @@ Every report shares one filter contract: `period=weekly|monthly|yearly|custom`, 
 No endpoint — consumed by 13.2/13.3. Validation errors surface there as 422 (`errors.period`, `errors.from`, …): custom without from/to → 422; from > to → 422; non-super-admin branch_id silently ignored (forced own).
 
 ## Success Criteria
-- [ ] All period resolutions unit-tested with frozen time; branch forcing; granularity helper; tests green
+- [x] All period resolutions unit-tested with frozen time; branch forcing; granularity helper; tests green
 
 ## Required Tests
 1. weekly/monthly/yearly ranges (Carbon::setTestNow)
