@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\ExamController;
 use App\Http\Controllers\Api\V1\ExpenseController;
 use App\Http\Controllers\Api\V1\FeeStructureController;
 use App\Http\Controllers\Api\V1\GradingScaleController;
+use App\Http\Controllers\Api\V1\IdCardController;
 use App\Http\Controllers\Api\V1\IncomeController;
 use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\MarkController;
@@ -154,6 +155,12 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::post('students/{student}/photo', [StudentController::class, 'photo'])
             ->middleware('permission:student.update')
             ->name('students.photo');
+
+        // Single ID card PDF (12.1): streamed on demand from live enrollment
+        // data — no table. Out-of-branch {student} ids 404 via BranchScope.
+        Route::get('students/{student}/id-card', [IdCardController::class, 'show'])
+            ->middleware('permission:idcard.generate')
+            ->name('students.id-card');
     });
 
     Route::middleware(['auth:sanctum', 'permission:parent.manage'])->group(function () {

@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 12 — Documents |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 11.4 |
 | Blocks | 12.2 |
 | Spec references | `docs/api/documents.md` |
@@ -23,7 +23,7 @@ Success — 200 application/pdf, `inline; filename="idcard-MP-2026-0009.pdf"`.
 Failures: student with no active enrollment → 422 `{ "message": "Student has no active enrollment" }`; TC/inactive student → 422; unknown/other-branch id → 404.
 
 ## Success Criteria
-- [ ] Renders with and without photo; correct enrollment data; TC blocked; tests green
+- [x] Renders with and without photo; correct enrollment data; TC blocked; tests green
 
 ## Required Tests
 1. 200 pdf-type happy; 2. missing photo still renders; 3. TC student 422; cross-branch 404
