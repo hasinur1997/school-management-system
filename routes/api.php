@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\BranchController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CheckinIpController;
 use App\Http\Controllers\Api\V1\ClassController;
+use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\ExamController;
 use App\Http\Controllers\Api\V1\ExpenseController;
 use App\Http\Controllers\Api\V1\FeeStructureController;
@@ -524,6 +525,12 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::get('reports/{type}/pdf', [ReportController::class, 'pdf'])
             ->where('type', 'income|expense|profit-loss|students|teachers|assets|fees')
             ->name('reports.pdf');
+    });
+
+    // Dashboard (14.2): one role-aware summary endpoint — the shape of `data`
+    // depends on the caller's role. Authenticated only; no permission gate.
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
     });
 
     // Settings (14.1): global + per-branch key/value store. Secrets are

@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 14 — Settings, Dashboard & Polish |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 14.1 |
 | Blocks | — |
 | Spec references | `docs/api/settings.md` |
@@ -30,7 +30,7 @@ Teacher — `{ "role_view": "teacher", "checked_in": true, "classes": [...], "at
 Student — `{ "role_view": "student", "attendance": {...}, "unpaid_invoices": [...], "latest_result": {...} }`.
 
 ## Success Criteria
-- [ ] Three shapes correct vs fixtures; aggregates SQL-side; no cross-branch leakage; tests green
+- [x] Three shapes correct vs fixtures; aggregates SQL-side; no cross-branch leakage; tests green
 
 ## Required Tests
 1. each role shape; 2. parent sees per-child blocks for linked only; 3. numbers reconcile with module fixtures
