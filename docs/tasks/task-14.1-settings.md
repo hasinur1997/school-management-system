@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 14 — Settings, Dashboard & Polish |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 13.4 |
 | Blocks | 14.2 |
 | Spec references | `docs/api/settings.md`, schema → `settings` |

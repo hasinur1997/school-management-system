@@ -46,7 +46,7 @@ class PaymentService
 
         $outstanding = bcsub($invoice->amount, $invoice->paid_amount, 2);
 
-        $this->assertAcceptableAmount($amount, $outstanding);
+        $this->assertAcceptableAmount($amount, $outstanding, $invoice->branch_id);
 
         return DB::transaction(function () use ($invoice, $amount, $collector): Payment {
             $payment = Payment::create([
@@ -83,7 +83,7 @@ class PaymentService
         $outstanding = bcsub($invoice->amount, $invoice->paid_amount, 2);
         $amount = $amount ?? $outstanding;
 
-        $this->assertAcceptableAmount($amount, $outstanding);
+        $this->assertAcceptableAmount($amount, $outstanding, $invoice->branch_id);
 
         $payment = Payment::create([
             'branch_id' => $invoice->branch_id,
@@ -205,7 +205,7 @@ class PaymentService
      *
      * @throws ValidationException
      */
-    private function assertAcceptableAmount(string $amount, string $outstanding): void
+    private function assertAcceptableAmount(string $amount, string $outstanding, int $branchId): void
     {
         if (bccomp($amount, '0', 2) <= 0) {
             throw ValidationException::withMessages([
@@ -213,7 +213,7 @@ class PaymentService
             ]);
         }
 
-        if ($this->settings->partialPaymentEnabled()) {
+        if ($this->settings->partialPaymentEnabled($branchId)) {
             if (bccomp($amount, $outstanding, 2) > 0) {
                 throw ValidationException::withMessages([
                     'amount' => "Amount may not exceed the outstanding {$outstanding}",

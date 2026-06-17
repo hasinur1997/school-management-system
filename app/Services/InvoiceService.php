@@ -78,7 +78,6 @@ class InvoiceService
             ->pluck('student_id')
             ->flip();
 
-        $dueDate = Carbon::create($year, $month, $this->settings->invoiceDueDay())->toDateString();
         $period = sprintf('%04d%02d', $year, $month);
         $now = now();
 
@@ -86,6 +85,9 @@ class InvoiceService
         // correct within each branch.
         foreach ($enrollments->groupBy('student.branch_id') as $branchId => $group) {
             $branch = $branches->get($branchId);
+
+            // Each branch's invoices fall due on its own configured due day.
+            $dueDate = Carbon::create($year, $month, $this->settings->invoiceDueDay((int) $branchId))->toDateString();
 
             // Continue the per-(branch, month, year) sequence from any invoices
             // already generated for the period.

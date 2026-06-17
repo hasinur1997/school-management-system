@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\ResultController;
 use App\Http\Controllers\Api\V1\SectionController;
 use App\Http\Controllers\Api\V1\SessionController;
+use App\Http\Controllers\Api\V1\SettingController;
 use App\Http\Controllers\Api\V1\StudentController;
 use App\Http\Controllers\Api\V1\SubjectController;
 use App\Http\Controllers\Api\V1\TeacherAssignmentController;
@@ -43,6 +44,10 @@ Route::prefix('v1')->name('v1.')->group(function () {
 
         Route::get('admissions/{application_no}/status', [PublicAdmissionController::class, 'status'])
             ->name('admissions.status');
+
+        // Safe subset for the public admission page: school name, logo URL,
+        // active branches and their open classes. Never exposes secrets.
+        Route::get('settings', [SettingController::class, 'publicSettings'])->name('settings');
     });
 
     // SSLCommerz callbacks (10.5) — public surface, no auth. The IPN is the
@@ -519,6 +524,14 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::get('reports/{type}/pdf', [ReportController::class, 'pdf'])
             ->where('type', 'income|expense|profit-loss|students|teachers|assets|fees')
             ->name('reports.pdf');
+    });
+
+    // Settings (14.1): global + per-branch key/value store. Secrets are
+    // write-only (masked on read). Super admins target another branch via
+    // branch_id; the cache is invalidated on every write.
+    Route::middleware(['auth:sanctum', 'permission:setting.manage'])->group(function () {
+        Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
+        Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
     });
 
     Route::middleware(['auth:sanctum', 'permission:branch.manage'])->group(function () {

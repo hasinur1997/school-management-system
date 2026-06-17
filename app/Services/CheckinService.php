@@ -43,7 +43,7 @@ class CheckinService
             'date' => $today->toDateString(),
             'check_in_at' => $now,
             'check_in_ip' => $ip,
-            'status' => $this->statusFor($now),
+            'status' => $this->statusFor($now, $teacher),
         ]);
     }
 
@@ -82,9 +82,9 @@ class CheckinService
     /**
      * `late` when the moment is past today's late threshold, else `present`.
      */
-    private function statusFor(Carbon $now): TeacherAttendanceStatus
+    private function statusFor(Carbon $now, Teacher $teacher): TeacherAttendanceStatus
     {
-        $threshold = $now->copy()->setTimeFromTimeString($this->settings->teacherLateThreshold());
+        $threshold = $now->copy()->setTimeFromTimeString($this->settings->teacherLateThreshold($teacher->branch_id));
 
         return $now->greaterThan($threshold)
             ? TeacherAttendanceStatus::Late
