@@ -512,6 +512,13 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::get('reports/teachers', [ReportController::class, 'teachers'])->name('reports.teachers');
         Route::get('reports/assets', [ReportController::class, 'assets'])->name('reports.assets');
         Route::get('reports/fees', [ReportController::class, 'fees'])->name('reports.fees');
+
+        // Report PDF exports (13.4): any of the seven reports as a streamed PDF
+        // over the same filter contract. The {type} constraint rejects unknown
+        // types with a 404; data comes from the same 13.2/13.3 services.
+        Route::get('reports/{type}/pdf', [ReportController::class, 'pdf'])
+            ->where('type', 'income|expense|profit-loss|students|teachers|assets|fees')
+            ->name('reports.pdf');
     });
 
     Route::middleware(['auth:sanctum', 'permission:branch.manage'])->group(function () {

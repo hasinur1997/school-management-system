@@ -6,7 +6,9 @@ use App\Http\Controllers\Api\ApiController;
 use App\Http\Requests\Report\ReportFilterRequest;
 use App\Services\EntityReportService;
 use App\Services\FinanceReportService;
+use App\Services\ReportPdfService;
 use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Phase 13 reports over the shared report filter contract: the finance reports
@@ -20,6 +22,7 @@ class ReportController extends ApiController
     public function __construct(
         private readonly FinanceReportService $reports,
         private readonly EntityReportService $entityReports,
+        private readonly ReportPdfService $reportPdfs,
     ) {}
 
     /**
@@ -80,5 +83,15 @@ class ReportController extends ApiController
     public function fees(ReportFilterRequest $request): JsonResponse
     {
         return $this->success($this->entityReports->fees($request->toFilter()));
+    }
+
+    /**
+     * Stream any of the seven reports as a PDF over the same filter contract.
+     * The {type} route constraint rejects unknown types with a 404; filter
+     * validation still returns the JSON envelope.
+     */
+    public function pdf(ReportFilterRequest $request, string $type): Response
+    {
+        return $this->reportPdfs->render($type, $request->toFilter());
     }
 }

@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 13 — Reports |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 13.3 |
 | Blocks | — |
 | Spec references | `docs/api/reports.md` |
@@ -19,7 +19,7 @@ Route constraint `type` ∈ income|expense|profit-loss|students|teachers|assets|
 Success — 200 application/pdf. Failures: invalid type → 404 route; filter 422s as JSON envelope; 403 without report.view.
 
 ## Success Criteria
-- [ ] All seven types render (parameterized smoke tests); data identical to JSON endpoints (shared service asserted); tests green
+- [x] All seven types render (parameterized smoke tests); data identical to JSON endpoints (shared service asserted); tests green
 
 ## Required Tests
 1. each type → 200 pdf; 2. invalid type 404; 3. custom-range filename correctness

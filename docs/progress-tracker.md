@@ -97,13 +97,13 @@ Specs: `api/documents.md`
 - [x] [12.2](tasks/task-12.2-idcard-batch.md) — Batch ID card queued job (chunked merge) + poll endpoint (202/processing/done+url)
 - [x] [12.3](tasks/task-12.3-tc.md) — TC
 
-## Phase 13 — Reports `[ ]`
+## Phase 13 — Reports `[x]`
 Specs: `api/reports.md`
 
 - [x] [13.1](tasks/task-13.1-report-filters.md) — Shared filter resolver
 - [x] [13.2](tasks/task-13.2-finance-reports.md) — Income / expense / profit-loss reports
 - [x] [13.3](tasks/task-13.3-entity-reports.md) — Students / teachers / assets / fees reports
-- [ ] [13.4](tasks/task-13.4-report-pdfs.md) — Report PDF exports
+- [x] [13.4](tasks/task-13.4-report-pdfs.md) — Report PDF exports
 
 ## Phase 14 — Settings, Dashboard & Polish `[ ]`
 Specs: `api/settings.md`
