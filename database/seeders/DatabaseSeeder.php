@@ -25,11 +25,18 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,
         ]);
 
-        User::factory()->create([
-            'name' => 'Hasinur Rahman',
-            'email' => 'hasinur@gmail.com',
-            'phone' => '01700000000',
-            'password' => bcrypt('password'),
-        ])->assignRole('super_admin');
+        // Idempotent so the whole seed can be re-run without colliding on the
+        // unique email.
+        $superAdmin = User::firstOrCreate(
+            ['email' => 'hasinur@gmail.com'],
+            [
+                'name' => 'Hasinur Rahman',
+                'phone' => '01700000000',
+                'password' => bcrypt('password'),
+            ],
+        );
+        $superAdmin->assignRole('super_admin');
+
+        $this->call(DemoSeeder::class);
     }
 }

@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 14 — Settings, Dashboard & Polish |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 14.2 |
 | Blocks | 14.4 |
 | Spec references | all docs |
@@ -19,9 +19,9 @@
 None. Acceptance is behavioral: after fresh-seed, the dashboard, reports, result search, and promotion preview all return non-empty, consistent data.
 
 ## Success Criteria
-- [ ] fresh --seed completes < 2 min, idempotent guards on static seeders
-- [ ] Smoke test hitting dashboard + 3 reports + result search against seeded data passes
-- [ ] No factory violates uniques/constraints across repeated runs; tests green
+- [x] fresh --seed completes < 2 min, idempotent guards on static seeders
+- [x] Smoke test hitting dashboard + 3 reports + result search against seeded data passes
+- [x] No factory violates uniques/constraints across repeated runs; tests green
 
 ## Required Tests
 1. seeded smoke suite (listed endpoints non-empty 200s); 2. seeder runs twice without constraint violations

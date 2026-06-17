@@ -20,19 +20,21 @@ class AdmissionApplicationFactory extends Factory
      */
     public function definition(): array
     {
+        $gender = fake()->randomElement(['male', 'female']);
+
         return [
             'branch_id' => Branch::factory(),
             'application_no' => sprintf('APP-FAC-%05d', fake()->unique()->numberBetween(1, 99999)),
             'desired_class_id' => SchoolClass::factory(),
 
-            'name_bn' => 'রহিম উদ্দিন',
-            'name_en' => fake()->name(),
+            'name_bn' => StudentFactory::banglaName($gender),
+            'name_en' => fake()->name($gender),
 
-            'father_name_bn' => 'করিম উদ্দিন',
+            'father_name_bn' => StudentFactory::banglaName('male'),
             'father_name_en' => fake()->name('male'),
             'father_nid' => fake()->optional()->numerify('##########'),
 
-            'mother_name_bn' => 'আমেনা বেগম',
+            'mother_name_bn' => StudentFactory::banglaName('female'),
             'mother_name_en' => fake()->name('female'),
             'mother_nid' => fake()->optional()->numerify('##########'),
 

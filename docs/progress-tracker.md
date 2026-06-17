@@ -110,7 +110,7 @@ Specs: `api/settings.md`
 
 - [x] [14.1](tasks/task-14.1-settings.md) — `settings` migration
 - [x] [14.2](tasks/task-14.2-dashboard.md) — Role-aware dashboard endpoint
-- [ ] [14.3](tasks/task-14.3-demo-seeders.md) — Full demo seeders + factory review (one branch fully populated)
+- [x] [14.3](tasks/task-14.3-demo-seeders.md) — Full demo seeders + factory review (one branch fully populated)
 - [ ] [14.4](tasks/task-14.4-final-polish.md) — Final pass
 
 ---
@@ -127,6 +127,7 @@ Specs: `api/settings.md`
 
 ## Decisions Log
 
+- 2026-06-17 — Task 14.3: `DemoSeeder` populates the first branch end-to-end, driving the **real** services (admission approval, marks, results, annual, bulk promotion, payment settlement, TC issuance) rather than hand-writing rows, so the seed exercises the same paths as the API. **Surprises the ticket left implicit:** (a) `DatabaseSeeder` uses `WithoutModelEvents`, which mutes the `BelongsToBranch` `creating` hook — services that rely on auto-stamping `branch_id` (TC issuance) silently insert NULL; fixed by `Model::setEventDispatcher(app('events'))` at the top of `DemoSeeder` (it runs last). All branch-scoped *direct* creates still pass `branch_id` explicitly to be safe. (b) The seeder runs as a logged-in branch admin (`Auth::login`) so `Auth::id()`/branch scope resolve for the services; logged out in a `finally`. (c) `bcrypt` per user was the entire cost — 360 users took ~100s; memoizing one password hash dropped a full `migrate:fresh --seed` to ~22s. (d) The 2025 promotion cohort *is* the exam-pipeline class (Class 1 → published per-exam + annual → bulk-promoted into 2026 Class 2); the current-session population is enrolled directly into 2026. Result search in the smoke test uses the (session, class, section, roll) coordinate style since promoted students' *current* enrollment has no results. (e) `DatabaseSeeder`'s super-admin create switched to `firstOrCreate` so the whole seed is re-runnable; `DemoSeeder` guards on existing students for the same reason. (f) Factory review: `StudentFactory`/`AdmissionApplicationFactory` now draw varied realistic Bangla names from a shared pool (`StudentFactory::BANGLA_NAMES`) instead of every row being `রহিম উদ্দিন`.
 - 2026-06-11 — Multi-branch confirmed; branch scoping via global scope.
 - 2026-06-11 — PDFs on demand except TC (persisted, legal record).
 - 2026-06-11 — Full-month payments default; partial behind setting toggle.

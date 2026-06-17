@@ -14,26 +14,50 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 class StudentFactory extends Factory
 {
     /**
+     * Realistic Bangla given names by gender plus shared surname parts, so a
+     * seeded cohort reads as a believable roster rather than rows of the same
+     * placeholder name.
+     *
+     * @var array{male: list<string>, female: list<string>, surname: list<string>}
+     */
+    public const BANGLA_NAMES = [
+        'male' => ['রহিম', 'করিম', 'আব্দুল্লাহ', 'সাকিব', 'তানভীর', 'নাইম', 'রাকিব', 'ইমরান', 'ফাহিম', 'সাব্বির', 'আরিফ', 'মাহমুদ'],
+        'female' => ['আমেনা', 'ফাতেমা', 'রাবেয়া', 'সুমাইয়া', 'আয়েশা', 'নুসরাত', 'তাসনিম', 'জান্নাত', 'মারিয়া', 'রিয়া', 'সাদিয়া', 'লামিয়া'],
+        'surname' => ['উদ্দিন', 'হোসেন', 'ইসলাম', 'আহমেদ', 'রহমান', 'মিয়া', 'সরকার', 'খান'],
+    ];
+
+    /**
+     * A realistic Bangla full name for the given gender (`male`|`female`).
+     */
+    public static function banglaName(string $gender): string
+    {
+        return fake()->randomElement(self::BANGLA_NAMES[$gender])
+            .' '.fake()->randomElement(self::BANGLA_NAMES['surname']);
+    }
+
+    /**
      * Define the model's default state.
      *
      * @return array<string, mixed>
      */
     public function definition(): array
     {
+        $gender = fake()->randomElement(['male', 'female']);
+
         return [
             'user_id' => User::factory(),
             'branch_id' => Branch::factory(),
             'application_id' => null,
             'admission_no' => sprintf('STU-FAC-%04d-%05d', fake()->numberBetween(2000, 2099), fake()->unique()->numberBetween(1, 99999)),
 
-            'name_bn' => 'রহিম উদ্দিন',
-            'name_en' => fake()->name(),
+            'name_bn' => self::banglaName($gender),
+            'name_en' => fake()->name($gender),
 
-            'father_name_bn' => 'করিম উদ্দিন',
+            'father_name_bn' => self::banglaName('male'),
             'father_name_en' => fake()->name('male'),
             'father_nid' => fake()->optional()->numerify('##########'),
 
-            'mother_name_bn' => 'আমেনা বেগম',
+            'mother_name_bn' => self::banglaName('female'),
             'mother_name_en' => fake()->name('female'),
             'mother_nid' => fake()->optional()->numerify('##########'),
 
