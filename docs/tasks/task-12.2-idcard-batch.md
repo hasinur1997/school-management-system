@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 12 — Documents |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 12.1 |
 | Blocks | — |
 | Spec references | `docs/api/documents.md`, CLAUDE.md → queue rule |
@@ -26,8 +26,8 @@ Success — 202 `{ "data": { "batch_id": "9f1c-...", "status": "processing" } }`
 ### GET .../download — 200 pdf | 409 if not done.
 
 ## Success Criteria
-- [ ] Job offloaded (Queue::fake assertion + real run in test queue), chunked, TC excluded
-- [ ] Poll lifecycle states; download guard; cleanup command scheduled; tests green
+- [x] Job offloaded (Queue::fake assertion + real run in test queue), chunked, TC excluded
+- [x] Poll lifecycle states; download guard; cleanup command scheduled; tests green
 
 ## Required Tests
 1. dispatch 202 + job queued; run job → done + file exists

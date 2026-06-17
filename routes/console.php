@@ -12,3 +12,7 @@ Artisan::command('inspire', function () {
 // No arguments → the current month/year. Idempotent, so a missed/retried run is
 // safe.
 Schedule::command('invoices:generate')->monthlyOn(1, '00:00');
+
+// Prune batch ID card PDFs older than 7 days — they are transient and
+// re-buildable on demand, so they are not kept indefinitely.
+Schedule::command('idcards:prune-batches')->dailyAt('01:00');

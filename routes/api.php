@@ -161,6 +161,17 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::get('students/{student}/id-card', [IdCardController::class, 'show'])
             ->middleware('permission:idcard.generate')
             ->name('students.id-card');
+
+        // Batch ID cards (12.2): queued merged-PDF build + poll + download.
+        // Foreign {batch} ids 404 via BranchScope route binding.
+        Route::middleware('permission:idcard.generate')->group(function () {
+            Route::post('id-cards/batch', [IdCardController::class, 'batch'])
+                ->name('id-cards.batch');
+            Route::get('id-cards/batch/{batch}', [IdCardController::class, 'batchStatus'])
+                ->name('id-cards.batch.status');
+            Route::get('id-cards/batch/{batch}/download', [IdCardController::class, 'download'])
+                ->name('id-cards.batch.download');
+        });
     });
 
     Route::middleware(['auth:sanctum', 'permission:parent.manage'])->group(function () {
