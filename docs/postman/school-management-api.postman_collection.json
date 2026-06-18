@@ -27,7 +27,16 @@
     { "key": "attendance_id", "value": "1", "type": "string" },
     { "key": "teacher_attendance_id", "value": "1", "type": "string" },
     { "key": "checkin_ip_id", "value": "1", "type": "string" },
-    { "key": "exam_id", "value": "1", "type": "string" }
+    { "key": "exam_id", "value": "1", "type": "string" },
+    { "key": "fee_structure_id", "value": "1", "type": "string" },
+    { "key": "invoice_id", "value": "1", "type": "string" },
+    { "key": "payment_id", "value": "1", "type": "string" },
+    { "key": "category_id", "value": "1", "type": "string" },
+    { "key": "income_id", "value": "1", "type": "string" },
+    { "key": "expense_id", "value": "1", "type": "string" },
+    { "key": "asset_id", "value": "1", "type": "string" },
+    { "key": "tc_id", "value": "1", "type": "string" },
+    { "key": "batch_id", "value": "1", "type": "string" }
   ],
   "item": [
     {
@@ -64,6 +73,17 @@
               "query": [{ "key": "date_of_birth", "value": "2015-01-10" }]
             },
             "description": "Public status lookup. Requires the application_no plus the matching date_of_birth; any mismatch returns 404 (never reveals existence)."
+          },
+          "response": []
+        },
+        {
+          "name": "Public settings",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/public/settings", "host": ["{{base_url}}"], "path": ["api", "v1", "public", "settings"] },
+            "description": "Public, unauthenticated. Safe subset for the public admission page: school name, logo URL, active branches and their open classes. Never exposes secrets."
           },
           "response": []
         }
@@ -1389,6 +1409,847 @@
               ]
             },
             "description": "Self-service. Students/parents see their own published results. `student_id` lets a parent pick a specific child."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Promotions",
+      "item": [
+        {
+          "name": "Promotion preview",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/promotions/preview?session_id={{session_id}}&class_id={{class_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "promotions", "preview"],
+              "query": [
+                { "key": "session_id", "value": "{{session_id}}" },
+                { "key": "class_id", "value": "{{class_id}}" }
+              ]
+            },
+            "description": "Permission `promotion.execute`. Returns eligible / not_eligible (reason: failed|no_result|tc) and the resolved to_class (numeric_level + 1)."
+          },
+          "response": []
+        },
+        {
+          "name": "Bulk promote",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/promotions/bulk", "host": ["{{base_url}}"], "path": ["api", "v1", "promotions", "bulk"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from_session_id\": {{session_id}},\n  \"from_class_id\": {{class_id}},\n  \"to_session_id\": 2,\n  \"to_section_id\": {{section_id}},\n  \"roll_strategy\": \"by_merit\"\n}"
+            },
+            "description": "Permission `promotion.execute`. Requires annual results published (else 409). Passed → next class, failed → fresh enrollment in same class. roll_strategy: by_merit | keep. to_session_id must differ from from_session_id."
+          },
+          "response": []
+        },
+        {
+          "name": "Individual promote",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/promotions/individual", "host": ["{{base_url}}"], "path": ["api", "v1", "promotions", "individual"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student_id\": {{student_id}},\n  \"to_session_id\": 2,\n  \"to_class_id\": 2,\n  \"to_section_id\": {{section_id}},\n  \"roll_no\": 1\n}"
+            },
+            "description": "Permission `promotion.execute`. Overriding a fail / missing result requires `promotion.override` (checked in the service)."
+          },
+          "response": []
+        },
+        {
+          "name": "Promotion history",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/promotions?per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "promotions"],
+              "query": [
+                { "key": "per_page", "value": "15" },
+                { "key": "session_id", "value": "1", "disabled": true },
+                { "key": "class_id", "value": "1", "disabled": true },
+                { "key": "type", "value": "promoted", "disabled": true }
+              ]
+            },
+            "description": "Permission `promotion.view`. Paginated, filterable log."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Fee Structures",
+      "item": [
+        {
+          "name": "List fee structures",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/fee-structures?per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "fee-structures"],
+              "query": [
+                { "key": "per_page", "value": "15" },
+                { "key": "session_id", "value": "1", "disabled": true },
+                { "key": "class_id", "value": "1", "disabled": true }
+              ]
+            },
+            "description": "Permission `fee.manage`. The monthly fee per (branch, session, class) that invoices copy at generation time."
+          },
+          "response": []
+        },
+        {
+          "name": "Create fee structure",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/fee-structures", "host": ["{{base_url}}"], "path": ["api", "v1", "fee-structures"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": {{session_id}},\n  \"class_id\": {{class_id}},\n  \"monthly_fee\": \"1500.00\"\n}"
+            },
+            "description": "Permission `fee.manage`. monthly_fee is money (decimal string, max 2 dp). No DELETE — history matters."
+          },
+          "response": []
+        },
+        {
+          "name": "Update fee structure",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/fee-structures/{{fee_structure_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "fee-structures", "{{fee_structure_id}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"monthly_fee\": \"1800.00\"\n}" },
+            "description": "Permission `fee.manage`. session_id/class_id are immutable (prohibited)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Invoices",
+      "item": [
+        {
+          "name": "Generate invoices",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/invoices/generate", "host": ["{{base_url}}"], "path": ["api", "v1", "invoices", "generate"] },
+            "body": { "mode": "raw", "raw": "{\n  \"month\": 6,\n  \"year\": 2026\n}" },
+            "description": "Permission `fee.manage`. Manual trigger of monthly generation (idempotent; normally the scheduler runs this on the 1st). TC students excluded."
+          },
+          "response": []
+        },
+        {
+          "name": "List invoices",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/invoices?per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "invoices"],
+              "query": [
+                { "key": "per_page", "value": "15" },
+                { "key": "student_id", "value": "1", "disabled": true },
+                { "key": "class_id", "value": "1", "disabled": true },
+                { "key": "status", "value": "unpaid", "disabled": true },
+                { "key": "month", "value": "6", "disabled": true },
+                { "key": "year", "value": "2026", "disabled": true }
+              ]
+            },
+            "description": "Permission `invoice.view` (staff only)."
+          },
+          "response": []
+        },
+        {
+          "name": "Show invoice",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/invoices/{{invoice_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "invoices", "{{invoice_id}}"] },
+            "description": "Authorized via StudentPolicy::viewInvoices (staff / self / linked parent, 404 hiding). Returns the invoice + its payments."
+          },
+          "response": []
+        },
+        {
+          "name": "My invoices (student/parent)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/me/invoices?year=2026",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "me", "invoices"],
+              "query": [
+                { "key": "year", "value": "2026" },
+                { "key": "student_id", "value": "1", "disabled": true }
+              ]
+            },
+            "description": "Student/parent self-service. `student_id` lets a parent pick a specific linked child."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Record local (cash) payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/invoices/{{invoice_id}}/payments/local", "host": ["{{base_url}}"], "path": ["api", "v1", "invoices", "{{invoice_id}}", "payments", "local"] },
+            "body": { "mode": "raw", "raw": "{\n  \"amount\": \"1500.00\"\n}" },
+            "description": "Permission `fee.collect`. amount must equal the outstanding amount unless the `partial_payment_enabled` setting is true. One transaction: payment paid (cash, receipt_no, collected_by) → invoice updated → income row. 409 if already paid."
+          },
+          "response": []
+        },
+        {
+          "name": "Init online (SSLCommerz) payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/invoices/{{invoice_id}}/payments/online", "host": ["{{base_url}}"], "path": ["api", "v1", "invoices", "{{invoice_id}}", "payments", "online"] },
+            "body": { "mode": "raw", "raw": "{\n  \"amount\": \"1500.00\"\n}" },
+            "description": "Authorized via StudentPolicy::payOnline (staff fee.collect / self / linked parent). Creates a pending payment, opens an SSLCommerz session, returns `{ gateway_url }` for client redirect. `amount` is optional (defaults to outstanding)."
+          },
+          "response": []
+        },
+        {
+          "name": "Payment receipt PDF",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/payments/{{payment_id}}/receipt", "host": ["{{base_url}}"], "path": ["api", "v1", "payments", "{{payment_id}}", "receipt"] },
+            "description": "Authorized via StudentPolicy::viewInvoices (staff / self / linked parent). Streamed money-receipt PDF, only when the payment status is `paid`."
+          },
+          "response": []
+        },
+        {
+          "name": "SSLCommerz IPN (gateway callback)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/payments/sslcommerz/ipn", "host": ["{{base_url}}"], "path": ["api", "v1", "payments", "sslcommerz", "ipn"] },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "tran_id", "value": "TXN-2026-0001" },
+                { "key": "val_id", "value": "SSLVALID123" },
+                { "key": "status", "value": "VALID" },
+                { "key": "amount", "value": "1500.00" }
+              ]
+            },
+            "description": "Public, no auth. Server-to-server source of truth. Looks up the payment by tran_id, verifies with SSLCommerz validation API, then runs the same settle pipeline as local. Idempotent: replayed IPN for a settled payment returns 200 with no changes. Invalid signature → 422 + payment marked failed."
+          },
+          "response": []
+        },
+        {
+          "name": "SSLCommerz landing (browser redirect)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/payments/sslcommerz/success", "host": ["{{base_url}}"], "path": ["api", "v1", "payments", "sslcommerz", "success"] },
+            "description": "Public, no auth. Browser redirect landing that only reports the payment's status and changes no state. Path segment is one of success | fail | cancel."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Categories",
+      "item": [
+        {
+          "name": "List categories",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories?per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"],
+              "query": [
+                { "key": "per_page", "value": "15" },
+                { "key": "type", "value": "income", "disabled": true }
+              ]
+            },
+            "description": "Permission `income.manage` OR `expense.manage`. Shared income/expense category list."
+          },
+          "response": []
+        },
+        {
+          "name": "Create category",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/categories", "host": ["{{base_url}}"], "path": ["api", "v1", "categories"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Tuition Fees\",\n  \"type\": \"income\"\n}" },
+            "description": "type: income | expense."
+          },
+          "response": []
+        },
+        {
+          "name": "Update category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/categories/{{category_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "categories", "{{category_id}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Tuition Fees (Monthly)\",\n  \"type\": \"income\"\n}" }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete category",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/categories/{{category_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "categories", "{{category_id}}"] },
+            "description": "409 if the category is in use by income/expense rows (rows keep category_id via RESTRICT)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Incomes",
+      "item": [
+        {
+          "name": "List incomes",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/incomes?per_page=15&sort=date&direction=desc",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "incomes"],
+              "query": [
+                { "key": "per_page", "value": "15" },
+                { "key": "sort", "value": "date" },
+                { "key": "direction", "value": "desc" },
+                { "key": "category_id", "value": "1", "disabled": true },
+                { "key": "from", "value": "2026-06-01", "disabled": true },
+                { "key": "to", "value": "2026-06-30", "disabled": true },
+                { "key": "search", "value": "tuition", "disabled": true }
+              ]
+            },
+            "description": "Permission `income.manage`. Rows include `is_system` (true when payment_id set) so clients can hide edit controls. sort: date | amount."
+          },
+          "response": []
+        },
+        {
+          "name": "Create income",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/incomes", "host": ["{{base_url}}"], "path": ["api", "v1", "incomes"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Donation\",\n  \"amount\": \"5000.00\",\n  \"date\": \"2026-06-14\",\n  \"category_id\": {{category_id}},\n  \"description\": \"Annual donation from alumni\"\n}"
+            },
+            "description": "Permission `income.manage`. category_id and description are nullable."
+          },
+          "response": []
+        },
+        {
+          "name": "Update income",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/incomes/{{income_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "incomes", "{{income_id}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Donation (Updated)\",\n  \"amount\": \"6000.00\",\n  \"date\": \"2026-06-14\",\n  \"category_id\": {{category_id}},\n  \"description\": null\n}"
+            },
+            "description": "Permission `income.manage`. 403 if `payment_id` is set (system-generated fee income is immutable)."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete income",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/incomes/{{income_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "incomes", "{{income_id}}"] },
+            "description": "403 if `payment_id` is set (system-generated)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Expenses",
+      "item": [
+        {
+          "name": "List expenses",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/expenses?per_page=15&sort=date&direction=desc",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "expenses"],
+              "query": [
+                { "key": "per_page", "value": "15" },
+                { "key": "sort", "value": "date" },
+                { "key": "direction", "value": "desc" },
+                { "key": "category_id", "value": "1", "disabled": true },
+                { "key": "from", "value": "2026-06-01", "disabled": true },
+                { "key": "to", "value": "2026-06-30", "disabled": true },
+                { "key": "search", "value": "electricity", "disabled": true }
+              ]
+            },
+            "description": "Permission `expense.manage`. Same filters/sorts as incomes."
+          },
+          "response": []
+        },
+        {
+          "name": "Create expense",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/expenses", "host": ["{{base_url}}"], "path": ["api", "v1", "expenses"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"item_name\": \"Electricity Bill\",\n  \"amount\": \"3200.00\",\n  \"date\": \"2026-06-14\",\n  \"category_id\": {{category_id}},\n  \"description\": \"June utility bill\"\n}"
+            },
+            "description": "Permission `expense.manage`. category_id must be an expense-type category in the caller's branch."
+          },
+          "response": []
+        },
+        {
+          "name": "Update expense",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/expenses/{{expense_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "expenses", "{{expense_id}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"item_name\": \"Electricity Bill (June)\",\n  \"amount\": \"3500.00\",\n  \"date\": \"2026-06-14\",\n  \"category_id\": {{category_id}},\n  \"description\": null\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete expense",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/expenses/{{expense_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "expenses", "{{expense_id}}"] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Assets",
+      "item": [
+        {
+          "name": "List assets",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/assets?per_page=15&sort=value&direction=desc",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "assets"],
+              "query": [
+                { "key": "per_page", "value": "15" },
+                { "key": "sort", "value": "value" },
+                { "key": "direction", "value": "desc" },
+                { "key": "status", "value": "in_use", "disabled": true },
+                { "key": "search", "value": "laptop", "disabled": true }
+              ]
+            },
+            "description": "Permission `asset.manage`. status: in_use | damaged | disposed. sort: value | purchase_date."
+          },
+          "response": []
+        },
+        {
+          "name": "Asset summary",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/assets/summary", "host": ["{{base_url}}"], "path": ["api", "v1", "assets", "summary"] },
+            "description": "Permission `asset.manage`. `{ total_value, count, by_status }`. total_value = in_use + damaged (disposed excluded)."
+          },
+          "response": []
+        },
+        {
+          "name": "Create asset",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/assets", "host": ["{{base_url}}"], "path": ["api", "v1", "assets"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dell Laptop\",\n  \"value\": \"55000.00\",\n  \"description\": \"Office laptop for accountant\",\n  \"purchase_date\": \"2026-01-15\",\n  \"status\": \"in_use\"\n}"
+            },
+            "description": "Permission `asset.manage`. description/purchase_date nullable; status defaults to in_use."
+          },
+          "response": []
+        },
+        {
+          "name": "Update asset",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/assets/{{asset_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "assets", "{{asset_id}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dell Laptop\",\n  \"value\": \"55000.00\",\n  \"description\": \"Reassigned\",\n  \"purchase_date\": \"2026-01-15\",\n  \"status\": \"damaged\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete asset",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/assets/{{asset_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "assets", "{{asset_id}}"] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "ID Cards & Transfer Certificates",
+      "item": [
+        {
+          "name": "Single student ID card (PDF)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/students/{{student_id}}/id-card", "host": ["{{base_url}}"], "path": ["api", "v1", "students", "{{student_id}}", "id-card"] },
+            "description": "Permission `idcard.generate`. Streamed on demand from live enrollment data (no table). Out-of-branch students 404."
+          },
+          "response": []
+        },
+        {
+          "name": "Batch ID cards",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/id-cards/batch", "host": ["{{base_url}}"], "path": ["api", "v1", "id-cards", "batch"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": {{session_id}},\n  \"class_id\": {{class_id}},\n  \"section_id\": {{section_id}}\n}"
+            },
+            "description": "Permission `idcard.generate`. Queued job builds one merged PDF (chunked). Returns `{ batch_id }` (202). section_id nullable (whole class)."
+          },
+          "response": []
+        },
+        {
+          "name": "Batch status",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/id-cards/batch/{{batch_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "id-cards", "batch", "{{batch_id}}"] },
+            "description": "Permission `idcard.generate`. Poll: `{ status: processing|done, url? }`."
+          },
+          "response": []
+        },
+        {
+          "name": "Batch download (PDF)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/id-cards/batch/{{batch_id}}/download", "host": ["{{base_url}}"], "path": ["api", "v1", "id-cards", "batch", "{{batch_id}}", "download"] },
+            "description": "Permission `idcard.generate`. Downloads the merged batch PDF once status is done."
+          },
+          "response": []
+        },
+        {
+          "name": "Issue transfer certificate",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/students/{{student_id}}/tc", "host": ["{{base_url}}"], "path": ["api", "v1", "students", "{{student_id}}", "tc"] },
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Family relocated to another district\",\n  \"issue_date\": \"2026-06-14\"\n}" },
+            "description": "Permission `tc.issue`. One transaction: create TC (generated tc_no) → student status tc → active enrollment status tc → render + persist the one stored PDF (legal record). Excludes the student from attendance/invoicing/promotion. 409 if TC already issued."
+          },
+          "response": []
+        },
+        {
+          "name": "List TCs",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tcs?per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tcs"],
+              "query": [
+                { "key": "per_page", "value": "15" },
+                { "key": "from", "value": "2026-01-01", "disabled": true },
+                { "key": "to", "value": "2026-12-31", "disabled": true },
+                { "key": "search", "value": "rahim", "disabled": true }
+              ]
+            },
+            "description": "Permission `tc.view`."
+          },
+          "response": []
+        },
+        {
+          "name": "Show TC",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/tcs/{{tc_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "tcs", "{{tc_id}}"] },
+            "description": "Permission `tc.view`."
+          },
+          "response": []
+        },
+        {
+          "name": "TC PDF",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/tcs/{{tc_id}}/pdf", "host": ["{{base_url}}"], "path": ["api", "v1", "tcs", "{{tc_id}}", "pdf"] },
+            "description": "Permission `tc.view`. Downloads the stored TC PDF (the one persisted PDF in the system)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        {
+          "name": "Income report",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/reports/income?period=monthly",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "reports", "income"],
+              "query": [
+                { "key": "period", "value": "monthly" },
+                { "key": "from", "value": "2026-06-01", "disabled": true },
+                { "key": "to", "value": "2026-06-30", "disabled": true },
+                { "key": "branch_id", "value": "all", "disabled": true }
+              ]
+            },
+            "description": "Permission `report.view`. period: weekly|monthly|yearly|custom (from/to required when custom). Super admins may pass branch_id (`all` = consolidated). Total + by_category + series (daily ≤ 62 days, else monthly)."
+          },
+          "response": []
+        },
+        {
+          "name": "Expense report",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/reports/expense?period=monthly",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "reports", "expense"],
+              "query": [{ "key": "period", "value": "monthly" }]
+            },
+            "description": "Permission `report.view`. Same shape as income."
+          },
+          "response": []
+        },
+        {
+          "name": "Profit & loss report",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/reports/profit-loss?period=monthly",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "reports", "profit-loss"],
+              "query": [{ "key": "period", "value": "monthly" }]
+            },
+            "description": "Permission `report.view`. `{ income_total, expense_total, net }` + series."
+          },
+          "response": []
+        },
+        {
+          "name": "Students report",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/reports/students?period=monthly",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "reports", "students"],
+              "query": [{ "key": "period", "value": "monthly" }]
+            },
+            "description": "Permission `report.view`. Totals by class, status (active/tc/inactive), new admissions in range."
+          },
+          "response": []
+        },
+        {
+          "name": "Teachers report",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/reports/teachers?period=monthly",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "reports", "teachers"],
+              "query": [{ "key": "period", "value": "monthly" }]
+            },
+            "description": "Permission `report.view`. Totals by status, attendance summary in range."
+          },
+          "response": []
+        },
+        {
+          "name": "Assets report",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/reports/assets?period=yearly",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "reports", "assets"],
+              "query": [{ "key": "period", "value": "yearly" }]
+            },
+            "description": "Permission `report.view`. Total value, by status, additions in range."
+          },
+          "response": []
+        },
+        {
+          "name": "Fees report",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/reports/fees?period=monthly",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "reports", "fees"],
+              "query": [{ "key": "period", "value": "monthly" }]
+            },
+            "description": "Permission `report.view`. Collected vs outstanding by month/class."
+          },
+          "response": []
+        },
+        {
+          "name": "Report PDF export",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/reports/income/pdf?period=monthly",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "reports", "income", "pdf"],
+              "query": [{ "key": "period", "value": "monthly" }]
+            },
+            "description": "Permission `report.view`. Streamed PDF of any report. {type} is one of income|expense|profit-loss|students|teachers|assets|fees (unknown → 404). Same query params as the JSON reports."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Settings & Dashboard",
+      "item": [
+        {
+          "name": "Get settings",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/settings",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "settings"],
+              "query": [{ "key": "branch_id", "value": "1", "disabled": true }]
+            },
+            "description": "Permission `setting.manage`. Global + current branch settings. Super admins may target another branch via `?branch_id=`. Secrets are write-only: GET returns `is_set: true` instead of the value."
+          },
+          "response": []
+        },
+        {
+          "name": "Update settings (bulk upsert)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/settings", "host": ["{{base_url}}"], "path": ["api", "v1", "settings"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"settings\": {\n    \"school_name\": \"Greenfield School\",\n    \"partial_payment_enabled\": true,\n    \"invoice_due_day\": 10,\n    \"sslcommerz_store_id\": \"greenfield01\",\n    \"sslcommerz_store_password\": \"secret-password\",\n    \"sslcommerz_sandbox\": true\n  }\n}"
+            },
+            "description": "Permission `setting.manage`. Bulk upsert of known keys (unknown keys → 422). Secrets (sslcommerz_store_password, sms_api_key) are write-only. Cache invalidated on write. Per-branch keys: partial_payment_enabled, late_fee_enabled, teacher_late_threshold (HH:MM), invoice_due_day (1–28)."
+          },
+          "response": []
+        },
+        {
+          "name": "Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/dashboard", "host": ["{{base_url}}"], "path": ["api", "v1", "dashboard"] },
+            "description": "Authenticated; no permission gate. Role-aware summary — the shape of `data` depends on the caller's role (admin/accountant, teacher, or student/parent)."
           },
           "response": []
         }
