@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Phase | 14 — Settings, Dashboard & Polish |
-| Status | `todo` |
+| Status | `done` |
 | Depends on | 14.3 |
 | Blocks | — (last task) |
 | Spec references | `CLAUDE.md`, `.claude/commands/performance-audit.md` |
@@ -24,9 +24,9 @@ Backend Phase 1 ships: clean, documented, audited.
 None new. Regression guarantee: the entire existing suite is the contract.
 
 ## Success Criteria
-- [ ] route:cache/config:cache succeed; README complete; Pint clean
-- [ ] Audit run, findings addressed or logged with rationale
-- [ ] Tracker fully reconciled; suite green
+- [x] route:cache/config:cache succeed; README complete; Pint clean
+- [x] Audit run, findings addressed or logged with rationale
+- [x] Tracker fully reconciled; suite green (516 passed). **Caveat:** task 8.4 (Marksheet PDFs) was skipped earlier and remains `todo`, so Phase 1 is not yet fully shippable — see Decisions Log.
 
 ## Required Tests
 Full suite (no new tests required beyond audit-driven ones).

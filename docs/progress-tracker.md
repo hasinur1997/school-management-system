@@ -44,7 +44,7 @@ Specs: `api/student-attendance.md`
 - [x] [5.2](tasks/task-5.2-attendance-save.md) — POST bulk save
 - [x] [5.3](tasks/task-5.3-attendance-monthly.md) — Monthly sheets
 
-## Phase 6 — Teacher Attendance `[ ]`
+## Phase 6 — Teacher Attendance `[x]`
 Specs: `api/teacher-attendance.md`
 
 - [x] [6.1](tasks/task-6.1-checkin-whitelist.md) — `teacher_attendances` + `checkin_ip_whitelists` migrations
@@ -66,7 +66,7 @@ Specs: `api/results.md`
 - [x] [8.3](tasks/task-8.3-result-reads.md) — Result search + `/enrollments/{id}/results` + `/me/results`
 - [ ] [8.4](tasks/task-8.4-result-pdfs.md) — Marksheet PDFs (per-exam + annual) via dompdf, streamed
 
-## Phase 9 — Promotion `[ ]`
+## Phase 9 — Promotion `[x]`
 Specs: `api/promotions.md`
 
 - [x] [9.1](tasks/task-9.1-promotion-preview.md) — `promotions` migration
@@ -105,13 +105,13 @@ Specs: `api/reports.md`
 - [x] [13.3](tasks/task-13.3-entity-reports.md) — Students / teachers / assets / fees reports
 - [x] [13.4](tasks/task-13.4-report-pdfs.md) — Report PDF exports
 
-## Phase 14 — Settings, Dashboard & Polish `[ ]`
+## Phase 14 — Settings, Dashboard & Polish `[x]`
 Specs: `api/settings.md`
 
 - [x] [14.1](tasks/task-14.1-settings.md) — `settings` migration
 - [x] [14.2](tasks/task-14.2-dashboard.md) — Role-aware dashboard endpoint
 - [x] [14.3](tasks/task-14.3-demo-seeders.md) — Full demo seeders + factory review (one branch fully populated)
-- [ ] [14.4](tasks/task-14.4-final-polish.md) — Final pass
+- [x] [14.4](tasks/task-14.4-final-polish.md) — Final pass
 
 ---
 
@@ -127,6 +127,7 @@ Specs: `api/settings.md`
 
 ## Decisions Log
 
+- 2026-06-17 — Task 14.4 (final pass): `config:cache` + `route:cache` both succeed (no route closures, no `env()` outside config — verified by grep). Pint clean; `composer audit` reports no advisories. **Strict mode** (CLAUDE.md "`Model::shouldBeStrict()` outside production") was **not** globally set before — only per-test `preventLazyLoading`; now `Model::shouldBeStrict(! $this->app->isProduction())` in `AppServiceProvider::boot`. Enabling it surfaced three latent issues, all fixed: (a) `AdmissionService::submit` passed `branch_id` into `new AdmissionApplication($attributes)` where it is intentionally not in `#[Fillable]` — silently discarded pre-strict, then re-set on the next line, so harmless in effect but exactly the class of bug strict mode prevents; now constructed via `Arr::except($attributes, ['branch_id'])`. (b) `StudentTablesTest::test_parent_student_linking_via_factory` lazy-loaded `$student->parents`; now `->load('parents')`. (c) **Flaky suite bug fixed at root**: `EnrollmentFactory::definition()` eagerly ran `Section::factory()->create()` on *every* call (even when `class_id`/`section_id` were overridden), creating a throwaway section + class; because the sanctum guard caches the authed user across requests (the recurring `forgetGuards()` gotcha), `Auth::user()` stayed non-null in test bodies after an HTTP call, so `BelongsToBranch::creating` re-stamped the stray class's `branch_id` to the cached branch and its random `fake()->unique()` level intermittently collided with explicitly-seeded classes (`UNIQUE(branch_id, numeric_level)`). `EnrollmentFactory` now resolves `section_id`/`class_id` lazily (`class_id` via a `fn (array $attributes)` closure off the resolved section), so overrides never trigger stray creation. **Performance audit** (manual — `.claude/commands/performance-audit.md` is referenced by the ticket but absent from the repo, and no `/performance-audit` skill exists): no `env()` outside config, no `DB::raw`, no money-as-float (the `(float)` casts are on marks/GPA, or transient inputs to `number_format` that emits decimal strings), `InvoiceService` bulk-inserts in chunks of 500, 20 paginated lists, mail + batch-PDF work queued. Highest-ROI outcome is global strict mode itself, which now enforces no-N+1 across all 516 tests permanently. README rewritten (setup, SSLCommerz sandbox env, migrate+seed, queue worker, scheduler cron, test command, doc map). **Not done — Phase 1 is NOT complete:** task **8.4 (Marksheet PDFs)** remains `todo` (skipped earlier; Phase 8 header stays `[ ]`). Suite green: 516 passed.
 - 2026-06-17 — Task 14.3: `DemoSeeder` populates the first branch end-to-end, driving the **real** services (admission approval, marks, results, annual, bulk promotion, payment settlement, TC issuance) rather than hand-writing rows, so the seed exercises the same paths as the API. **Surprises the ticket left implicit:** (a) `DatabaseSeeder` uses `WithoutModelEvents`, which mutes the `BelongsToBranch` `creating` hook — services that rely on auto-stamping `branch_id` (TC issuance) silently insert NULL; fixed by `Model::setEventDispatcher(app('events'))` at the top of `DemoSeeder` (it runs last). All branch-scoped *direct* creates still pass `branch_id` explicitly to be safe. (b) The seeder runs as a logged-in branch admin (`Auth::login`) so `Auth::id()`/branch scope resolve for the services; logged out in a `finally`. (c) `bcrypt` per user was the entire cost — 360 users took ~100s; memoizing one password hash dropped a full `migrate:fresh --seed` to ~22s. (d) The 2025 promotion cohort *is* the exam-pipeline class (Class 1 → published per-exam + annual → bulk-promoted into 2026 Class 2); the current-session population is enrolled directly into 2026. Result search in the smoke test uses the (session, class, section, roll) coordinate style since promoted students' *current* enrollment has no results. (e) `DatabaseSeeder`'s super-admin create switched to `firstOrCreate` so the whole seed is re-runnable; `DemoSeeder` guards on existing students for the same reason. (f) Factory review: `StudentFactory`/`AdmissionApplicationFactory` now draw varied realistic Bangla names from a shared pool (`StudentFactory::BANGLA_NAMES`) instead of every row being `রহিম উদ্দিন`.
 - 2026-06-11 — Multi-branch confirmed; branch scoping via global scope.
 - 2026-06-11 — PDFs on demand except TC (persisted, legal record).

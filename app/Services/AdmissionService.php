@@ -62,7 +62,9 @@ class AdmissionService
         return DB::transaction(function () use ($attributes, $previousEducations, $photo, $documents): AdmissionApplication {
             $branchId = (int) $attributes['branch_id'];
 
-            $application = new AdmissionApplication($attributes);
+            // branch_id is stamped explicitly below (it is intentionally not
+            // mass-assignable), so keep it out of the constructor.
+            $application = new AdmissionApplication(Arr::except($attributes, ['branch_id']));
             $application->branch_id = $branchId;
             $application->application_no = $this->applicationNos->generate($branchId);
             $application->save();

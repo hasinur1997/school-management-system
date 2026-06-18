@@ -40,7 +40,7 @@ class StudentTablesTest extends TestCase
         $this->assertDatabaseCount('parent_student', 2);
 
         $student = $parent->students->first();
-        $this->assertTrue($student->parents->contains($parent));
+        $this->assertTrue($student->load('parents')->parents->contains($parent));
     }
 
     public function test_current_enrollment_resolves_to_the_current_session(): void

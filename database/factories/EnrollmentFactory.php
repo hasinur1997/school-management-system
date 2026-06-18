@@ -17,20 +17,22 @@ class EnrollmentFactory extends Factory
     /**
      * Define the model's default state.
      *
-     * Class and section are kept coherent: a section is built first and its
-     * parent class supplies class_id.
+     * Class and section are kept coherent: class_id is derived from the
+     * resolved section. Both are lazy so that callers overriding `section_id`
+     * and/or `class_id` (the common case) never trigger a throwaway section +
+     * class — eager creation here previously leaked stray rows whose branch_id
+     * could be re-stamped by the authenticated user, colliding with explicitly
+     * seeded classes.
      *
      * @return array<string, mixed>
      */
     public function definition(): array
     {
-        $section = Section::factory()->create();
-
         return [
             'student_id' => Student::factory(),
             'session_id' => AcademicSession::factory(),
-            'class_id' => $section->class_id,
-            'section_id' => $section->id,
+            'section_id' => Section::factory(),
+            'class_id' => fn (array $attributes): int => Section::findOrFail($attributes['section_id'])->class_id,
             'roll_no' => fake()->unique()->numberBetween(1, 9999),
             'status' => EnrollmentStatus::Active,
         ];
