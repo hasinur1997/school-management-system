@@ -20,10 +20,12 @@ use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\MarkController;
 use App\Http\Controllers\Api\V1\ParentController;
 use App\Http\Controllers\Api\V1\PaymentController;
+use App\Http\Controllers\Api\V1\PermissionController;
 use App\Http\Controllers\Api\V1\PromotionController;
 use App\Http\Controllers\Api\V1\PublicAdmissionController;
 use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\ResultController;
+use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\SectionController;
 use App\Http\Controllers\Api\V1\SessionController;
 use App\Http\Controllers\Api\V1\SettingController;
@@ -33,6 +35,7 @@ use App\Http\Controllers\Api\V1\TeacherAssignmentController;
 use App\Http\Controllers\Api\V1\TeacherAttendanceController;
 use App\Http\Controllers\Api\V1\TeacherController;
 use App\Http\Controllers\Api\V1\TransferCertificateController;
+use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('v1.')->group(function () {
@@ -539,6 +542,22 @@ Route::prefix('v1')->name('v1.')->group(function () {
     Route::middleware(['auth:sanctum', 'permission:setting.manage'])->group(function () {
         Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
         Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
+    });
+
+    // Access control management (15.1): super-admin-only surface to read the
+    // permission registry, edit role permission bundles, and assign roles to
+    // users. Gated by role.manage — seeded into no role bundle, so only super
+    // admins reach it (via Gate::before). Service-layer guards protect the
+    // super_admin role (403) and the last active super admin (422).
+    Route::middleware(['auth:sanctum', 'permission:role.manage'])->group(function () {
+        Route::get('permissions', [PermissionController::class, 'index'])->name('permissions.index');
+
+        Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
+        Route::get('roles/{role}', [RoleController::class, 'show'])->name('roles.show');
+        Route::put('roles/{role}/permissions', [RoleController::class, 'syncPermissions'])->name('roles.permissions.sync');
+
+        Route::get('users', [UserController::class, 'index'])->name('users.index');
+        Route::put('users/{user}/roles', [UserController::class, 'syncRoles'])->name('users.roles.sync');
     });
 
     Route::middleware(['auth:sanctum', 'permission:branch.manage'])->group(function () {

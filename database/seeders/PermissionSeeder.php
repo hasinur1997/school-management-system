@@ -52,6 +52,7 @@ class PermissionSeeder extends Seeder
         'tc.view',
         'report.view',
         'setting.manage',
+        'role.manage',
     ];
 
     /**
