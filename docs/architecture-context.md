@@ -17,7 +17,8 @@
 
 ## System Boundaries
 
-- `routes/api.php` — Versioned route definitions grouped by module; middleware stacks applied here (auth, permission, branch scope).
+- `routes/api.php` — API route entry point; applies the `/api/v1` URI prefix and `v1.` route-name prefix, then loads module route files from `routes/api/v1`.
+- `routes/api/v1/*.php` — Module route definitions; each file owns one functional area and applies its own auth, permission, throttle, and module-level prefixes.
 - `app/Http/Controllers/Api/V1` — Thin controllers: receive validated input, call a service, return a Resource. No business logic.
 - `app/Http/Requests` — Form Requests: all input validation and authorization gates per endpoint.
 - `app/Http/Resources` — API Resources: all response shaping. Models are never serialized directly.
@@ -90,6 +91,24 @@
 - Errors return appropriate HTTP status codes with the same envelope; validation errors include a field-keyed `errors` object.
 - Route names and URIs are plural-resource style: `/api/v1/students`, `/api/v1/students/{student}/attendance`.
 - Multi-step writes (admission approval, promotion, payment completion) are wrapped in DB transactions inside services.
+
+## API Routing Model
+
+- `routes/api.php` is the only top-level API route file Laravel loads directly. It wraps all API routes in `Route::prefix('v1')->name('v1.')->group(...)`, so every module file loaded inside it automatically serves under `/api/v1` and receives route names beginning with `v1.`.
+- Module files live in `routes/api/v1`. They do not repeat the `v1` URI prefix or `v1.` route-name prefix.
+- Module files import only the controllers they use and define the middleware for their own endpoints. Public endpoints, auth routes, permission-gated routes, and self-service routes should stay explicit in the module file.
+- The include order in `routes/api.php` is part of routing behavior. Add more specific routes before broad parameter routes when they share a URI prefix, and keep related modules near existing neighboring modules.
+- Existing modules include `public`, `auth`, `sessions`, `classes`, `teachers`, `students`, `parents`, `admissions`, `teacher-assignments`, `attendance`, `grading-scales`, `exams`, `marks`, `results`, `promotions`, `fees`, `accounting`, `assets`, `reports`, `dashboard`, `settings`, `access-control`, and `branches`.
+
+### Adding a Module Route File
+
+1. Create a focused file under `routes/api/v1`, for example `routes/api/v1/library.php`.
+2. Start the file with `<?php`, import `Illuminate\Support\Facades\Route`, and import only the controllers used by that file.
+3. Define routes exactly as they should appear after `/api/v1`; for example `Route::get('books', ...)` serves `/api/v1/books`.
+4. Apply middleware in the module file, usually `auth:sanctum` plus the required permission middleware. Keep public routes rare and intentional.
+5. Give every route a stable name without the `v1.` prefix; for example `->name('books.index')` becomes `v1.books.index`.
+6. Add `require __DIR__.'/api/v1/library.php';` to `routes/api.php` inside the existing `v1` group.
+7. Run `php artisan route:list` and confirm the URI, method, middleware, and route names are correct.
 
 ## Invariants
 
