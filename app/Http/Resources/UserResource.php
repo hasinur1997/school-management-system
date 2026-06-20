@@ -27,6 +27,7 @@ class UserResource extends JsonResource
             'phone' => $this->phone,
             'branch_id' => $this->branch_id,
             'is_active' => $this->is_active,
+            'photo_url' => $this->photoUrl(),
             'roles' => $this->getRoleNames(),
             'permissions' => $this->effectivePermissions(),
         ];

@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -36,7 +38,7 @@ class AuthService
 
         return [
             'token' => $user->createToken($deviceName)->plainTextToken,
-            'user' => $user,
+            'user' => $user->load('media'),
         ];
     }
 
@@ -50,5 +52,49 @@ class AuthService
         $user->tokens()
             ->whereKeyNot($user->currentAccessToken()->id)
             ->delete();
+    }
+
+    /**
+     * Update the authenticated user's account details. Teacher and parent
+     * profiles duplicate these simple contact fields, so keep them in sync.
+     *
+     * @param  array{name: string, email: string|null, phone: string}  $data
+     */
+    public function updateProfile(User $user, array $data): User
+    {
+        return DB::transaction(function () use ($user, $data): User {
+            $user->forceFill([
+                'name' => $data['name'],
+                'email' => $data['email'] ?? null,
+                'phone' => $data['phone'],
+            ])->save();
+
+            $teacherData = [
+                'name' => $data['name'],
+                'phone' => $data['phone'],
+            ];
+
+            if (($data['email'] ?? null) !== null) {
+                $teacherData['email'] = $data['email'];
+            }
+
+            $user->teacher()->withoutGlobalScopes()->update($teacherData);
+            $user->parentProfile()->withoutGlobalScopes()->update([
+                'name' => $data['name'],
+                'phone' => $data['phone'],
+            ]);
+
+            return $user->load('media');
+        });
+    }
+
+    /**
+     * Store/replace the authenticated user's account photo.
+     */
+    public function setPhoto(User $user, UploadedFile $photo): User
+    {
+        $user->addMedia($photo)->toMediaCollection('photo');
+
+        return $user->load('media');
     }
 }

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Api\ApiController;
 use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\UpdateProfileRequest;
+use App\Http\Requests\Auth\UploadProfilePhotoRequest;
 use App\Http\Resources\UserResource;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
@@ -36,7 +38,27 @@ class AuthController extends ApiController
      */
     public function me(Request $request): JsonResponse
     {
-        return $this->success(UserResource::make($request->user()));
+        return $this->success(UserResource::make($request->user()->load('media')));
+    }
+
+    /**
+     * Update the authenticated user's account details.
+     */
+    public function updateProfile(UpdateProfileRequest $request): JsonResponse
+    {
+        $user = $this->authService->updateProfile($request->user(), $request->validated());
+
+        return $this->success(UserResource::make($user), 'Profile updated');
+    }
+
+    /**
+     * Store/replace the authenticated user's account photo.
+     */
+    public function photo(UploadProfilePhotoRequest $request): JsonResponse
+    {
+        $user = $this->authService->setPhoto($request->user(), $request->file('photo'));
+
+        return $this->success(UserResource::make($user), 'Profile photo updated');
     }
 
     /**

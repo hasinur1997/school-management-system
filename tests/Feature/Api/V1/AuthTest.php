@@ -2,9 +2,14 @@
 
 namespace Tests\Feature\Api\V1;
 
+use App\Models\Branch;
+use App\Models\ParentProfile;
+use App\Models\Teacher;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AuthTest extends TestCase
@@ -187,6 +192,173 @@ class AuthTest extends TestCase
                 'success' => false,
                 'message' => 'Unauthenticated.',
             ]);
+    }
+
+    public function test_update_profile_changes_current_user_details(): void
+    {
+        $user = User::factory()->create([
+            'name' => 'Old Name',
+            'email' => 'old@example.com',
+            'phone' => '01710000000',
+        ]);
+        $token = $user->createToken('web')->plainTextToken;
+
+        $this->withToken($token)->putJson('/api/v1/auth/profile', [
+            'name' => 'New Name',
+            'email' => 'new@example.com',
+            'phone' => '01719999999',
+        ])->assertOk()
+            ->assertJsonPath('message', 'Profile updated')
+            ->assertJsonPath('data.name', 'New Name')
+            ->assertJsonPath('data.email', 'new@example.com')
+            ->assertJsonPath('data.phone', '01719999999')
+            ->assertJsonPath('data.photo_url', null);
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'name' => 'New Name',
+            'email' => 'new@example.com',
+            'phone' => '01719999999',
+        ]);
+    }
+
+    public function test_update_profile_rejects_duplicate_email_and_phone(): void
+    {
+        $existing = User::factory()->create();
+        $user = User::factory()->create();
+        $token = $user->createToken('web')->plainTextToken;
+
+        $this->withToken($token)->putJson('/api/v1/auth/profile', [
+            'name' => 'New Name',
+            'email' => $existing->email,
+            'phone' => $existing->phone,
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['email', 'phone']);
+    }
+
+    public function test_update_profile_keeps_teacher_contact_fields_in_sync(): void
+    {
+        $this->flushAuthState();
+
+        $teacherBranch = Branch::factory()->create();
+        $teacherUser = User::factory()->create([
+            'branch_id' => $teacherBranch->id,
+            'name' => 'Old Teacher',
+            'email' => 'old.teacher@example.com',
+            'phone' => '01710000001',
+        ]);
+        $teacher = Teacher::factory()->create([
+            'user_id' => $teacherUser->id,
+            'branch_id' => $teacherBranch->id,
+            'name' => 'Old Teacher',
+            'email' => 'old.teacher@example.com',
+            'phone' => '01710000001',
+        ]);
+        $teacherToken = $teacherUser->createToken('web')->plainTextToken;
+
+        $this->withToken($teacherToken)->putJson('/api/v1/auth/profile', [
+            'name' => 'New Teacher',
+            'email' => 'new.teacher@example.com',
+            'phone' => '01710000002',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('teachers', [
+            'id' => $teacher->id,
+            'name' => 'New Teacher',
+            'email' => 'new.teacher@example.com',
+            'phone' => '01710000002',
+        ]);
+    }
+
+    public function test_update_profile_keeps_parent_contact_fields_in_sync(): void
+    {
+        $this->flushAuthState();
+        $parentBranch = Branch::factory()->create();
+        $parentUser = User::factory()->create([
+            'branch_id' => $parentBranch->id,
+            'name' => 'Old Parent',
+            'email' => null,
+            'phone' => '01710000003',
+        ]);
+        $parent = ParentProfile::factory()->create([
+            'user_id' => $parentUser->id,
+            'branch_id' => $parentBranch->id,
+            'name' => 'Old Parent',
+            'phone' => '01710000003',
+        ]);
+        $parentToken = $parentUser->createToken('web')->plainTextToken;
+
+        $this->withToken($parentToken)->putJson('/api/v1/auth/profile', [
+            'name' => 'New Parent',
+            'email' => null,
+            'phone' => '01710000004',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('parents', [
+            'id' => $parent->id,
+            'name' => 'New Parent',
+            'phone' => '01710000004',
+        ]);
+    }
+
+    public function test_teacher_profile_update_requires_email(): void
+    {
+        $branch = Branch::factory()->create();
+        $user = User::factory()->create([
+            'branch_id' => $branch->id,
+            'email' => 'teacher@example.com',
+        ]);
+        Teacher::factory()->create([
+            'user_id' => $user->id,
+            'branch_id' => $branch->id,
+            'email' => 'teacher@example.com',
+        ]);
+        $token = $user->createToken('web')->plainTextToken;
+
+        $this->withToken($token)->putJson('/api/v1/auth/profile', [
+            'name' => 'New Teacher',
+            'email' => null,
+            'phone' => '01712222222',
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['email']);
+    }
+
+    public function test_profile_photo_upload_then_replacement(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+        $token = $user->createToken('web')->plainTextToken;
+
+        $first = $this->withToken($token)->postJson('/api/v1/auth/photo', [
+            'photo' => UploadedFile::fake()->image('first.jpg'),
+        ])->assertOk()
+            ->assertJsonPath('message', 'Profile photo updated');
+
+        $this->assertNotNull($first->json('data.photo_url'));
+        $this->assertSame(1, $user->fresh()->getMedia('photo')->count());
+
+        $this->withToken($token)->postJson('/api/v1/auth/photo', [
+            'photo' => UploadedFile::fake()->image('second.png'),
+        ])->assertOk();
+
+        $this->assertSame(1, $user->fresh()->getMedia('photo')->count());
+    }
+
+    public function test_profile_photo_rejects_wrong_type_and_oversize(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+        $token = $user->createToken('web')->plainTextToken;
+
+        $this->withToken($token)->postJson('/api/v1/auth/photo', [
+            'photo' => UploadedFile::fake()->create('doc.pdf', 100, 'application/pdf'),
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['photo']);
+
+        $this->withToken($token)->postJson('/api/v1/auth/photo', [
+            'photo' => UploadedFile::fake()->image('big.jpg')->size(3000),
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['photo']);
     }
 
     public function test_change_password_succeeds_and_revokes_other_tokens(): void
