@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\CategoryType;
 use App\Models\Concerns\BelongsToBranch;
+use App\Models\Concerns\HasPublicId;
 use Database\Factories\CategoryFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,7 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Category extends Model
 {
     /** @use HasFactory<CategoryFactory> */
-    use BelongsToBranch, HasFactory;
+    use BelongsToBranch, HasFactory, HasPublicId;
 
     /**
      * Get the attributes that should be cast.

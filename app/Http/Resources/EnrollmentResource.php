@@ -23,7 +23,7 @@ class EnrollmentResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
+            'id' => $this->public_id,
             'session' => $this->session?->name,
             'class' => $this->schoolClass?->name,
             'section' => $this->section?->name,

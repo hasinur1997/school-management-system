@@ -52,7 +52,6 @@ class AdmissionApplicationFactory extends Factory
             'permanent_division' => 'বিভাগ',
             'mother_mobile' => fake()->numerify('018########'),
 
-
             'birth_reg_no' => fake()->unique()->numerify('#################'),
             'date_of_birth' => fake()->dateTimeBetween('-15 years', '-5 years')->format('Y-m-d'),
             'religion' => fake()->randomElement(['Islam', 'Hinduism', 'Christianity', 'Buddhism']),

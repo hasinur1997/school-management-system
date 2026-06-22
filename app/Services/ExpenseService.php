@@ -22,6 +22,7 @@ class ExpenseService
         $direction = $filters['direction'] ?? 'desc';
 
         return Expense::query()
+            ->with('category')
             ->when(isset($filters['category_id']), fn (Builder $query) => $query->where('category_id', $filters['category_id']))
             ->when(isset($filters['from']), fn (Builder $query) => $query->whereDate('date', '>=', $filters['from']))
             ->when(isset($filters['to']), fn (Builder $query) => $query->whereDate('date', '<=', $filters['to']))
@@ -40,7 +41,7 @@ class ExpenseService
     {
         $data['created_by'] = Auth::id();
 
-        return Expense::create($data);
+        return Expense::create($data)->load('category');
     }
 
     /**
@@ -52,7 +53,7 @@ class ExpenseService
     {
         $expense->update($data);
 
-        return $expense;
+        return $expense->load('category');
     }
 
     /**

@@ -29,7 +29,7 @@ class StudentListResource extends JsonResource
         $enrollment = $this->currentEnrollment;
 
         return [
-            'id' => $this->id,
+            'id' => $this->public_id,
             'admission_no' => $this->admission_no,
             'name_en' => $this->name_en,
             'name_bn' => $this->name_bn,

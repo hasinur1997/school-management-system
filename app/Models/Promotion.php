@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\PromotionType;
+use App\Models\Concerns\HasPublicId;
 use Database\Factories\PromotionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -27,7 +28,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Promotion extends Model
 {
     /** @use HasFactory<PromotionFactory> */
-    use HasFactory;
+    use HasFactory, HasPublicId;
 
     /**
      * Get the attributes that should be cast.

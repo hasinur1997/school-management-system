@@ -19,8 +19,8 @@ class SectionResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'class_id' => $this->class_id,
+            'id' => $this->public_id,
+            'class_id' => $this->whenLoaded('schoolClass', fn () => $this->schoolClass->public_id),
             'name' => $this->name,
             // Always null until teachers exist (Phase 2) and the assignment
             // endpoint can populate class_teacher_id.

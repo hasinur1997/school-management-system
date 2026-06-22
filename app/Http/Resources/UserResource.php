@@ -21,11 +21,11 @@ class UserResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
+            'id' => $this->public_id,
             'name' => $this->name,
             'email' => $this->email,
             'phone' => $this->phone,
-            'branch_id' => $this->branch_id,
+            'branch_id' => $this->whenLoaded('branch', fn () => $this->branch?->public_id),
             'is_active' => $this->is_active,
             'photo_url' => $this->photoUrl(),
             'roles' => $this->getRoleNames(),

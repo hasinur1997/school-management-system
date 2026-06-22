@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToBranchThroughEnrollment;
+use App\Models\Concerns\HasPublicId;
 use Database\Factories\ExamResultFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -21,7 +22,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ExamResult extends Model
 {
     /** @use HasFactory<ExamResultFactory> */
-    use BelongsToBranchThroughEnrollment, HasFactory;
+    use BelongsToBranchThroughEnrollment, HasFactory, HasPublicId;
 
     /**
      * Get the attributes that should be cast.

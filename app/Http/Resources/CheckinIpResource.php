@@ -19,8 +19,8 @@ class CheckinIpResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'branch_id' => $this->branch_id,
+            'id' => $this->public_id,
+            'branch_id' => $this->whenLoaded('branch', fn () => $this->branch->public_id),
             'ip_address' => $this->ip_address,
             'label' => $this->label,
             'is_active' => $this->is_active,

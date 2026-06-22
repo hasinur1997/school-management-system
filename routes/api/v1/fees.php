@@ -40,7 +40,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('me/invoices', [InvoiceController::class, 'me'])
         ->name('me.invoices');
 
-    Route::get('invoices/{id}', [InvoiceController::class, 'show'])
+    Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])
         ->name('invoices.show');
 });
 
@@ -49,7 +49,7 @@ Route::middleware('auth:sanctum')->group(function () {
 // by fee.collect; out-of-branch {invoice} ids 404 via BranchScope binding.
 // The receipt PDF carries no permission middleware — it authorizes via
 // StudentPolicy::viewInvoices (staff/self/linked parent, 404 hiding) and only
-// for a paid payment; out-of-branch {id} 404s via BranchScope.
+// for a paid payment; out-of-branch payments 404 via BranchScope.
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('invoices/{invoice}/payments/local', [PaymentController::class, 'local'])
         ->middleware('permission:fee.collect')
@@ -61,6 +61,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('invoices/{invoice}/payments/online', [PaymentController::class, 'online'])
         ->name('payments.online');
 
-    Route::get('payments/{id}/receipt', [PaymentController::class, 'receipt'])
+    Route::get('payments/{payment}/receipt', [PaymentController::class, 'receipt'])
         ->name('payments.receipt');
 });

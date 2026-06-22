@@ -41,6 +41,7 @@ class WhitelistService
     public function list(int $perPage): LengthAwarePaginator
     {
         return CheckinIpWhitelist::query()
+            ->with('branch')
             ->orderByDesc('id')
             ->paginate($perPage);
     }
@@ -56,7 +57,7 @@ class WhitelistService
 
         $this->forget($entry->branch_id);
 
-        return $entry;
+        return $entry->load('branch');
     }
 
     /**
@@ -70,7 +71,7 @@ class WhitelistService
 
         $this->forget($entry->branch_id);
 
-        return $entry;
+        return $entry->load('branch');
     }
 
     /**

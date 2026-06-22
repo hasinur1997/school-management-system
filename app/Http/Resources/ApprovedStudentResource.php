@@ -26,7 +26,7 @@ class ApprovedStudentResource extends JsonResource
         $enrollment = $this->enrollments->first();
 
         return [
-            'id' => $this->id,
+            'id' => $this->public_id,
             'admission_no' => $this->admission_no,
             'name_en' => $this->name_en,
             'enrollment' => [

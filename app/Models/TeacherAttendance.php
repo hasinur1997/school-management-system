@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\TeacherAttendanceStatus;
 use App\Models\Concerns\BelongsToBranchThroughTeacher;
+use App\Models\Concerns\HasPublicId;
 use Database\Factories\TeacherAttendanceFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -23,7 +24,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class TeacherAttendance extends Model
 {
     /** @use HasFactory<TeacherAttendanceFactory> */
-    use BelongsToBranchThroughTeacher, HasFactory;
+    use BelongsToBranchThroughTeacher, HasFactory, HasPublicId;
 
     /**
      * Get the attributes that should be cast.

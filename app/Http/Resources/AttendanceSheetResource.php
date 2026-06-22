@@ -30,7 +30,7 @@ class AttendanceSheetResource extends JsonResource
                 $student = $enrollment->student;
 
                 return [
-                    'enrollment_id' => $enrollment->id,
+                    'enrollment_id' => $enrollment->public_id,
                     'roll_no' => $enrollment->roll_no,
                     'name_en' => $student->name_en,
                     'photo_url' => $student->photoUrl(),

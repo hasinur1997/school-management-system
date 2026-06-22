@@ -19,8 +19,8 @@ class SubjectResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'class_id' => $this->class_id,
+            'id' => $this->public_id,
+            'class_id' => $this->whenLoaded('schoolClass', fn () => $this->schoolClass->public_id),
             'name' => $this->name,
             'code' => $this->code,
             'full_marks' => $this->full_marks,

@@ -78,6 +78,7 @@ class AttendanceService
         $now = now();
 
         $rows = array_map(fn (array $record): array => [
+            'public_id' => StudentAttendance::newPublicId(),
             'enrollment_id' => $record['enrollment_id'],
             'date' => $date,
             'status' => $record['status'],
@@ -105,7 +106,7 @@ class AttendanceService
     {
         $attendance->update(['status' => $status]);
 
-        return $attendance->load('enrollment.student');
+        return $attendance->load(['enrollment.student', 'recorder']);
     }
 
     /**
@@ -170,7 +171,7 @@ class AttendanceService
     public function list(array $filters, int $perPage): LengthAwarePaginator
     {
         return StudentAttendance::query()
-            ->with(['enrollment.student'])
+            ->with(['enrollment.student', 'recorder'])
             ->when(
                 isset($filters['class_id']) || isset($filters['section_id']),
                 fn (Builder $query) => $query->whereHas('enrollment', function (Builder $enrollment) use ($filters): void {

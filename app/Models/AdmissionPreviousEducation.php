@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPublicId;
 use Database\Factories\AdmissionPreviousEducationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,7 +20,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class AdmissionPreviousEducation extends Model
 {
     /** @use HasFactory<AdmissionPreviousEducationFactory> */
-    use HasFactory;
+    use HasFactory, HasPublicId;
 
     /**
      * "education" is uncountable, so the inferred plural is wrong.

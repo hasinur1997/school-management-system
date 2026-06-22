@@ -22,11 +22,11 @@ class AdmissionListResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
+            'id' => $this->public_id,
             'application_no' => $this->application_no,
             'name_en' => $this->name_en,
             'desired_class' => $this->desiredClass === null ? null : [
-                'id' => $this->desiredClass->id,
+                'id' => $this->desiredClass->public_id,
                 'name' => $this->desiredClass->name,
             ],
             'father_mobile' => $this->father_mobile,

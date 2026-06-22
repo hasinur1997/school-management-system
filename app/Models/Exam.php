@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\ExamStatus;
 use App\Enums\ExamType;
 use App\Models\Concerns\BelongsToBranch;
+use App\Models\Concerns\HasPublicId;
 use Database\Factories\ExamFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,7 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Exam extends Model
 {
     /** @use HasFactory<ExamFactory> */
-    use BelongsToBranch, HasFactory;
+    use BelongsToBranch, HasFactory, HasPublicId;
 
     /**
      * The model's default values for attributes.

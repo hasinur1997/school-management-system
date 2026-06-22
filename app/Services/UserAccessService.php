@@ -28,7 +28,7 @@ class UserAccessService
     {
         return User::query()
             ->withGlobalScope(BranchScope::class, new BranchScope)
-            ->with('roles')
+            ->with(['branch', 'roles'])
             ->when(isset($filters['role']), fn (Builder $query) => $query->role($filters['role']))
             ->when(isset($filters['search']), function (Builder $query) use ($filters): void {
                 $term = '%'.$filters['search'].'%';
@@ -58,7 +58,7 @@ class UserAccessService
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        return $user->load('roles');
+        return $user->load(['branch', 'roles']);
     }
 
     /**

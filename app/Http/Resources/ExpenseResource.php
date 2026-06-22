@@ -19,12 +19,12 @@ class ExpenseResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
+            'id' => $this->public_id,
             'item_name' => $this->item_name,
             // decimal:2 cast renders money as a 2dp decimal string, e.g. "8200.00".
             'amount' => $this->amount,
             'date' => $this->date->toDateString(),
-            'category_id' => $this->category_id,
+            'category_id' => $this->whenLoaded('category', fn () => $this->category?->public_id),
             'description' => $this->description,
         ];
     }

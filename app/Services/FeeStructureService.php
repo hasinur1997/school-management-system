@@ -18,6 +18,7 @@ class FeeStructureService
     public function list(array $filters, int $perPage): LengthAwarePaginator
     {
         return FeeStructure::query()
+            ->with(['session', 'schoolClass'])
             ->when(isset($filters['session_id']), fn (Builder $query) => $query->where('session_id', $filters['session_id']))
             ->when(isset($filters['class_id']), fn (Builder $query) => $query->where('class_id', $filters['class_id']))
             ->orderByDesc('id')
@@ -36,7 +37,8 @@ class FeeStructureService
     {
         $class = SchoolClass::findOrFail($data['class_id']);
 
-        return FeeStructure::create([...$data, 'branch_id' => $class->branch_id]);
+        return FeeStructure::create([...$data, 'branch_id' => $class->branch_id])
+            ->load(['session', 'schoolClass']);
     }
 
     /**
@@ -50,6 +52,6 @@ class FeeStructureService
     {
         $feeStructure->update(['monthly_fee' => $data['monthly_fee']]);
 
-        return $feeStructure;
+        return $feeStructure->load(['session', 'schoolClass']);
     }
 }

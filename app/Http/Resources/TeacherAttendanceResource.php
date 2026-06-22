@@ -20,17 +20,17 @@ class TeacherAttendanceResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
+            'id' => $this->public_id,
             'date' => $this->date->toDateString(),
             'check_in_at' => $this->check_in_at?->toIso8601String(),
             'check_out_at' => $this->check_out_at?->toIso8601String(),
             'status' => $this->status->value,
             'teacher' => $this->whenLoaded('teacher', fn () => [
-                'id' => $this->teacher->id,
+                'id' => $this->teacher->public_id,
                 'name' => $this->teacher->name,
             ]),
             'corrected_by' => $this->whenLoaded('correctedBy', fn () => $this->correctedBy === null ? null : [
-                'id' => $this->correctedBy->id,
+                'id' => $this->correctedBy->public_id,
                 'name' => $this->correctedBy->name,
             ]),
         ];

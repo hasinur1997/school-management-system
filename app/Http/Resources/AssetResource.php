@@ -19,7 +19,7 @@ class AssetResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
+            'id' => $this->public_id,
             'name' => $this->name,
             // decimal:2 cast renders money as a 2dp decimal string, e.g. "45000.00".
             'value' => $this->value,

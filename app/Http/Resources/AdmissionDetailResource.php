@@ -26,10 +26,10 @@ class AdmissionDetailResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
+            'id' => $this->public_id,
             'application_no' => $this->application_no,
             'desired_class' => $this->desiredClass === null ? null : [
-                'id' => $this->desiredClass->id,
+                'id' => $this->desiredClass->public_id,
                 'name' => $this->desiredClass->name,
             ],
 
@@ -79,7 +79,7 @@ class AdmissionDetailResource extends JsonResource
             // Item 13 — previous schooling
             'previous_educations' => $this->previousEducations
                 ->map(fn (AdmissionPreviousEducation $education): array => [
-                    'id' => $education->id,
+                    'id' => $education->public_id,
                     'exam_name' => $education->exam_name,
                     'institution_name' => $education->institution_name,
                     'gpa' => $education->gpa,
@@ -92,7 +92,7 @@ class AdmissionDetailResource extends JsonResource
             'status' => $this->status->value,
             'rejection_reason' => $this->rejection_reason,
             'reviewed_by' => $this->reviewer === null ? null : [
-                'id' => $this->reviewer->id,
+                'id' => $this->reviewer->public_id,
                 'name' => $this->reviewer->name,
             ],
             'reviewed_at' => $this->reviewed_at?->toIso8601String(),

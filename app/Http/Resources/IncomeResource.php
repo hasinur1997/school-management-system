@@ -19,12 +19,12 @@ class IncomeResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
+            'id' => $this->public_id,
             'title' => $this->title,
             // decimal:2 cast renders money as a 2dp decimal string, e.g. "25000.00".
             'amount' => $this->amount,
             'date' => $this->date->toDateString(),
-            'category_id' => $this->category_id,
+            'category_id' => $this->whenLoaded('category', fn () => $this->category?->public_id),
             'description' => $this->description,
             // payment_id set → system-generated fee income, immutable.
             'is_system' => $this->isSystem(),

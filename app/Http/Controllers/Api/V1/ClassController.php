@@ -36,7 +36,7 @@ class ClassController extends ApiController
             $request->targetBranchId(),
         );
 
-        return $this->success(ClassResource::make($class->load('sections')), 'Class created', 201);
+        return $this->success(ClassResource::make($class->load(['branch', 'sections.schoolClass'])), 'Class created', 201);
     }
 
     /**
@@ -44,7 +44,7 @@ class ClassController extends ApiController
      */
     public function show(SchoolClass $class): JsonResponse
     {
-        $class->load(['sections' => fn ($query) => $query->orderBy('name')]);
+        $class->load(['branch', 'sections' => fn ($query) => $query->with('schoolClass')->orderBy('name')]);
 
         return $this->success(ClassResource::make($class));
     }
@@ -56,7 +56,7 @@ class ClassController extends ApiController
     {
         $class = $this->classes->updateClass($class, $request->validated());
 
-        return $this->success(ClassResource::make($class->load('sections')), 'Class updated');
+        return $this->success(ClassResource::make($class->load(['branch', 'sections.schoolClass'])), 'Class updated');
     }
 
     /**

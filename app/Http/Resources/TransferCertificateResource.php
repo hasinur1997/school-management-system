@@ -22,7 +22,7 @@ class TransferCertificateResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
+            'id' => $this->public_id,
             'tc_no' => $this->tc_no,
             'student' => StudentListResource::make($this->whenLoaded('student')),
             'reason' => $this->reason,

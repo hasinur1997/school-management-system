@@ -24,8 +24,8 @@ class TeacherResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'user_id' => $this->user_id,
+            'id' => $this->public_id,
+            'user_id' => $this->whenLoaded('user', fn () => $this->user->public_id),
             'name' => $this->name,
             'email' => $this->email,
             'phone' => $this->phone,
@@ -35,15 +35,15 @@ class TeacherResource extends JsonResource
             'photo_url' => $this->photoUrl(),
             'assignments' => $this->whenLoaded('assignments', fn () => $this->assignments->map(fn (TeacherAssignment $assignment): array => [
                 'class' => $assignment->schoolClass === null ? null : [
-                    'id' => $assignment->schoolClass->id,
+                    'id' => $assignment->schoolClass->public_id,
                     'name' => $assignment->schoolClass->name,
                 ],
                 'section' => $assignment->section === null ? null : [
-                    'id' => $assignment->section->id,
+                    'id' => $assignment->section->public_id,
                     'name' => $assignment->section->name,
                 ],
                 'subject' => $assignment->subject === null ? null : [
-                    'id' => $assignment->subject->id,
+                    'id' => $assignment->subject->public_id,
                     'name' => $assignment->subject->name,
                 ],
             ])->all()),

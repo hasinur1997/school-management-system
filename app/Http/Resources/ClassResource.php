@@ -19,8 +19,8 @@ class ClassResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'branch_id' => $this->branch_id,
+            'id' => $this->public_id,
+            'branch_id' => $this->whenLoaded('branch', fn () => $this->branch->public_id),
             'name' => $this->name,
             'numeric_level' => $this->numeric_level,
             'is_active' => $this->is_active,

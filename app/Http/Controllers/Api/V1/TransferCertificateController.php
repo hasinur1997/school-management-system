@@ -25,7 +25,7 @@ class TransferCertificateController extends ApiController
     {
         $tc = $this->tcs->issue($student, $request->validated());
 
-        $tc->load('student.currentEnrollment.schoolClass:id,name', 'student.currentEnrollment.section:id,name');
+        $tc->load('student.currentEnrollment.schoolClass:id,public_id,name', 'student.currentEnrollment.section:id,public_id,name');
 
         return $this->success(
             TransferCertificateResource::make($tc),
@@ -62,7 +62,7 @@ class TransferCertificateController extends ApiController
      */
     public function show(TransferCertificate $tc): JsonResponse
     {
-        $tc->load('student.currentEnrollment.schoolClass:id,name', 'student.currentEnrollment.section:id,name');
+        $tc->load('student.currentEnrollment.schoolClass:id,public_id,name', 'student.currentEnrollment.section:id,public_id,name');
 
         return $this->success(TransferCertificateResource::make($tc));
     }

@@ -28,16 +28,16 @@ class AdmissionStatusResource extends JsonResource
         return [
             'application_no' => $this->application_no,
             'branch' => $branch === null ? null : [
-                'id' => $branch->id,
+                'id' => $branch->public_id,
                 'name' => $branch->name,
                 'code' => $branch->code,
             ],
             'class' => $desiredClass === null ? null : [
-                'id' => $desiredClass->id,
+                'id' => $desiredClass->public_id,
                 'name' => $desiredClass->name,
             ],
             'session' => $currentSession === null ? null : [
-                'id' => $currentSession->id,
+                'id' => $currentSession->public_id,
                 'name' => $currentSession->name,
                 'start_date' => $currentSession->start_date?->toDateString(),
                 'end_date' => $currentSession->end_date?->toDateString(),

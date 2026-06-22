@@ -218,6 +218,7 @@ class AnnualResultService
         $isPassed = (bool) $final->is_passed && ! in_array($grade, $failGrades, true);
 
         return [
+            'public_id' => AnnualResult::newPublicId(),
             'enrollment_id' => $enrollmentId,
             'first_semester_gpa' => $first->gpa,
             'second_semester_gpa' => $second->gpa,

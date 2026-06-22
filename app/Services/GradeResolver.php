@@ -76,6 +76,7 @@ class GradeResolver
 
             GradingScale::insert(array_map(
                 fn (array $band): array => [
+                    'public_id' => GradingScale::newPublicId(),
                     'grade' => $band['grade'],
                     'min_marks' => $band['min_marks'],
                     'max_marks' => $band['max_marks'],

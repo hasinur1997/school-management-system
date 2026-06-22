@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\TeacherStatus;
 use App\Models\Concerns\BelongsToBranch;
+use App\Models\Concerns\HasPublicId;
 use Database\Factories\TeacherFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -22,7 +23,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 class Teacher extends Model implements HasMedia
 {
     /** @use HasFactory<TeacherFactory> */
-    use BelongsToBranch, HasFactory, InteractsWithMedia, SoftDeletes;
+    use BelongsToBranch, HasFactory, HasPublicId, InteractsWithMedia, SoftDeletes;
 
     /**
      * Get the attributes that should be cast.

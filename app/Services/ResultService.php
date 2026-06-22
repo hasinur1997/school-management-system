@@ -190,6 +190,14 @@ class ResultService
     }
 
     /**
+     * Load a route-bound enrollment with the student needed for policy checks.
+     */
+    public function loadEnrollment(Enrollment $enrollment): Enrollment
+    {
+        return $enrollment->load('student');
+    }
+
+    /**
      * Resolve a student's enrollment for the result reads: the named session
      * when given, otherwise the current-session enrollment falling back to the
      * latest. A student with no matching enrollment → 404.
@@ -274,6 +282,7 @@ class ResultService
             : $this->gradeForGpa($gpa);
 
         return [
+            'public_id' => ExamResult::newPublicId(),
             'exam_id' => $exam->id,
             'enrollment_id' => $enrollmentId,
             'total_marks' => $total,

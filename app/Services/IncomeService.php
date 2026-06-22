@@ -22,6 +22,7 @@ class IncomeService
         $direction = $filters['direction'] ?? 'desc';
 
         return Income::query()
+            ->with('category')
             ->when(isset($filters['category_id']), fn (Builder $query) => $query->where('category_id', $filters['category_id']))
             ->when(isset($filters['from']), fn (Builder $query) => $query->whereDate('date', '>=', $filters['from']))
             ->when(isset($filters['to']), fn (Builder $query) => $query->whereDate('date', '<=', $filters['to']))
@@ -41,7 +42,7 @@ class IncomeService
     {
         $data['created_by'] = Auth::id();
 
-        return Income::create($data);
+        return Income::create($data)->load('category');
     }
 
     /**
@@ -56,7 +57,7 @@ class IncomeService
 
         $income->update($data);
 
-        return $income;
+        return $income->load('category');
     }
 
     /**

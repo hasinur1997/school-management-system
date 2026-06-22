@@ -43,7 +43,7 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middleware('permission:result.view')
         ->name('results.search');
 
-    Route::get('enrollments/{id}/results', [ResultController::class, 'enrollmentResults'])
+    Route::get('enrollments/{enrollment}/results', [ResultController::class, 'enrollmentResults'])
         ->name('enrollments.results');
 
     Route::get('me/results', [ResultController::class, 'meResults'])

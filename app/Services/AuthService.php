@@ -38,7 +38,7 @@ class AuthService
 
         return [
             'token' => $user->createToken($deviceName)->plainTextToken,
-            'user' => $user->load('media'),
+            'user' => $user->load(['branch', 'media']),
         ];
     }
 
@@ -84,7 +84,7 @@ class AuthService
                 'phone' => $data['phone'],
             ]);
 
-            return $user->load('media');
+            return $user->load(['branch', 'media']);
         });
     }
 
@@ -95,6 +95,6 @@ class AuthService
     {
         $user->addMedia($photo)->toMediaCollection('photo');
 
-        return $user->load('media');
+        return $user->load(['branch', 'media']);
     }
 }

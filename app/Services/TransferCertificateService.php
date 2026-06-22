@@ -72,7 +72,7 @@ class TransferCertificateService
     public function list(array $filters, int $perPage): LengthAwarePaginator
     {
         return TransferCertificate::query()
-            ->with(['student.currentEnrollment.schoolClass:id,name', 'student.currentEnrollment.section:id,name'])
+            ->with(['student.currentEnrollment.schoolClass:id,public_id,name', 'student.currentEnrollment.section:id,public_id,name'])
             ->when(isset($filters['from']), fn (Builder $query) => $query->whereDate('issue_date', '>=', $filters['from']))
             ->when(isset($filters['to']), fn (Builder $query) => $query->whereDate('issue_date', '<=', $filters['to']))
             ->when(isset($filters['search']), function (Builder $query) use ($filters): void {
@@ -118,10 +118,10 @@ class TransferCertificateService
     private function attachPdf(TransferCertificate $tc, Student $student): void
     {
         $student->loadMissing([
-            'branch:id,name,code,address,phone',
+            'branch:id,public_id,name,code,address,phone',
             'enrollments' => fn ($query) => $query
                 ->where('status', EnrollmentStatus::Tc->value)
-                ->with(['session', 'schoolClass:id,name', 'section:id,name']),
+                ->with(['session', 'schoolClass:id,public_id,name', 'section:id,public_id,name']),
         ]);
 
         $pdf = Pdf::loadView('pdf.tc', [

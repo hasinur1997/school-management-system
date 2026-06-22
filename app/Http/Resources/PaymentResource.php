@@ -19,7 +19,7 @@ class PaymentResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
+            'id' => $this->public_id,
             'receipt_no' => $this->receipt_no,
             // decimal:2 cast renders money as a 2dp decimal string, e.g. "1500.00".
             'amount' => $this->amount,
@@ -27,11 +27,11 @@ class PaymentResource extends JsonResource
             'status' => $this->status->value,
             'paid_at' => $this->paid_at?->toIso8601String(),
             'invoice' => $this->whenLoaded('invoice', fn (): array => [
-                'id' => $this->invoice->id,
+                'id' => $this->invoice->public_id,
                 'status' => $this->invoice->status->value,
                 'paid_amount' => $this->invoice->paid_amount,
             ]),
-            'receipt_url' => "/api/v1/payments/{$this->id}/receipt",
+            'receipt_url' => "/api/v1/payments/{$this->public_id}/receipt",
         ];
     }
 }

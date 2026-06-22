@@ -19,9 +19,9 @@ class ExamResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'session_id' => $this->session_id,
-            'class_id' => $this->class_id,
+            'id' => $this->public_id,
+            'session_id' => $this->whenLoaded('session', fn () => $this->session->public_id),
+            'class_id' => $this->whenLoaded('schoolClass', fn () => $this->schoolClass->public_id),
             'type' => $this->type->value,
             'name' => $this->name,
             'start_date' => $this->start_date?->format('Y-m-d'),

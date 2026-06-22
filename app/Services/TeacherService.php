@@ -119,6 +119,7 @@ class TeacherService
 
         return $teacher->load([
             'media',
+            'user',
             'assignments' => fn ($query) => $query
                 ->where('session_id', $currentSessionId)
                 ->with(['schoolClass', 'section', 'subject']),
@@ -147,7 +148,7 @@ class TeacherService
                 'phone' => $data['phone'],
             ]);
 
-            return $teacher->load('media');
+            return $teacher->load(['media', 'user']);
         });
     }
 
@@ -168,7 +169,7 @@ class TeacherService
                 $teacher->user->tokens()->delete();
             }
 
-            return $teacher->load('media');
+            return $teacher->load(['media', 'user']);
         });
     }
 
@@ -180,6 +181,6 @@ class TeacherService
     {
         $teacher->addMedia($photo)->toMediaCollection('photo');
 
-        return $teacher->load('media');
+        return $teacher->load(['media', 'user']);
     }
 }

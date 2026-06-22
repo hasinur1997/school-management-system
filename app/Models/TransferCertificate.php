@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToBranch;
+use App\Models\Concerns\HasPublicId;
 use Database\Factories\TransferCertificateFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -21,7 +22,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 class TransferCertificate extends Model implements HasMedia
 {
     /** @use HasFactory<TransferCertificateFactory> */
-    use BelongsToBranch, HasFactory, InteractsWithMedia;
+    use BelongsToBranch, HasFactory, HasPublicId, InteractsWithMedia;
 
     /**
      * Get the attributes that should be cast.

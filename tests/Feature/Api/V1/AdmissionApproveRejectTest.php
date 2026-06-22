@@ -94,7 +94,7 @@ class AdmissionApproveRejectTest extends TestCase
         $application->addMedia(UploadedFile::fake()->image('photo.jpg'))->toMediaCollection('photo');
 
         $response = $this->withToken($this->tokenForRole('admin'))
-            ->postJson("/api/v1/admissions/{$application->id}/approve", $this->approvePayload([
+            ->postJson("/api/v1/admissions/{$application->public_id}/approve", $this->approvePayload([
                 'admission_no' => 'STU-JA-2026-0012',
             ]))
             ->assertOk()
@@ -153,7 +153,7 @@ class AdmissionApproveRejectTest extends TestCase
         ]);
 
         $response = $this->withToken($this->tokenForRole('admin'))
-            ->postJson("/api/v1/admissions/{$application->id}/approve", $this->approvePayload([
+            ->postJson("/api/v1/admissions/{$application->public_id}/approve", $this->approvePayload([
                 'create_parent_account' => true,
                 'parent_relation' => 'father',
             ]))
@@ -198,7 +198,7 @@ class AdmissionApproveRejectTest extends TestCase
         config(['media-library.disk_name' => 'does-not-exist']);
 
         $this->withToken($this->tokenForRole('admin'))
-            ->postJson("/api/v1/admissions/{$application->id}/approve", $this->approvePayload())
+            ->postJson("/api/v1/admissions/{$application->public_id}/approve", $this->approvePayload())
             ->assertStatus(500);
 
         // No rows survive the rollback.
@@ -219,12 +219,12 @@ class AdmissionApproveRejectTest extends TestCase
         $token = $this->tokenForRole('admin');
 
         $this->withToken($token)
-            ->postJson("/api/v1/admissions/{$first->id}/approve", $this->approvePayload(['roll_no' => 12, 'admission_no' => 'STU-JA-2026-0001']))
+            ->postJson("/api/v1/admissions/{$first->public_id}/approve", $this->approvePayload(['roll_no' => 12, 'admission_no' => 'STU-JA-2026-0001']))
             ->assertOk();
 
         $second = $this->makeApplication();
         $this->withToken($token)
-            ->postJson("/api/v1/admissions/{$second->id}/approve", $this->approvePayload(['roll_no' => 12]))
+            ->postJson("/api/v1/admissions/{$second->public_id}/approve", $this->approvePayload(['roll_no' => 12]))
             ->assertStatus(422)
             ->assertJsonValidationErrors('roll_no');
     }
@@ -234,7 +234,7 @@ class AdmissionApproveRejectTest extends TestCase
         $application = $this->makeApplication();
 
         $this->withToken($this->tokenForRole('admin'))
-            ->postJson("/api/v1/admissions/{$application->id}/approve", $this->approvePayload([
+            ->postJson("/api/v1/admissions/{$application->public_id}/approve", $this->approvePayload([
                 'roll_no' => 405060,
             ]))
             ->assertStatus(422)
@@ -250,12 +250,12 @@ class AdmissionApproveRejectTest extends TestCase
         $token = $this->tokenForRole('admin');
 
         $this->withToken($token)
-            ->postJson("/api/v1/admissions/{$first->id}/approve", $this->approvePayload(['roll_no' => 1, 'admission_no' => 'STU-JA-2026-0001']))
+            ->postJson("/api/v1/admissions/{$first->public_id}/approve", $this->approvePayload(['roll_no' => 1, 'admission_no' => 'STU-JA-2026-0001']))
             ->assertOk();
 
         $second = $this->makeApplication();
         $this->withToken($token)
-            ->postJson("/api/v1/admissions/{$second->id}/approve", $this->approvePayload(['roll_no' => 2, 'admission_no' => 'STU-JA-2026-0001']))
+            ->postJson("/api/v1/admissions/{$second->public_id}/approve", $this->approvePayload(['roll_no' => 2, 'admission_no' => 'STU-JA-2026-0001']))
             ->assertStatus(422)
             ->assertJsonValidationErrors('admission_no');
     }
@@ -268,7 +268,7 @@ class AdmissionApproveRejectTest extends TestCase
         $application = $this->makeApplication();
 
         $this->withToken($this->tokenForRole('admin'))
-            ->postJson("/api/v1/admissions/{$application->id}/approve", $this->approvePayload(['section_id' => $foreignSection->id]))
+            ->postJson("/api/v1/admissions/{$application->public_id}/approve", $this->approvePayload(['section_id' => $foreignSection->id]))
             ->assertStatus(422)
             ->assertJsonValidationErrors('section_id');
     }
@@ -278,7 +278,7 @@ class AdmissionApproveRejectTest extends TestCase
         $application = $this->makeApplication();
 
         $this->withToken($this->tokenForRole('accountant'))
-            ->postJson("/api/v1/admissions/{$application->id}/approve", $this->approvePayload())
+            ->postJson("/api/v1/admissions/{$application->public_id}/approve", $this->approvePayload())
             ->assertStatus(403);
     }
 
@@ -288,12 +288,12 @@ class AdmissionApproveRejectTest extends TestCase
         $application = $this->makeApplication();
 
         $this->withToken($token)
-            ->postJson("/api/v1/admissions/{$application->id}/approve", $this->approvePayload())
+            ->postJson("/api/v1/admissions/{$application->public_id}/approve", $this->approvePayload())
             ->assertOk();
 
         // A reviewed (approved) application cannot be reviewed again.
         $this->withToken($token)
-            ->postJson("/api/v1/admissions/{$application->id}/reject", ['rejection_reason' => 'Changed my mind'])
+            ->postJson("/api/v1/admissions/{$application->public_id}/reject", ['rejection_reason' => 'Changed my mind'])
             ->assertStatus(409)
             ->assertJsonPath('message', 'Application has already been reviewed.');
     }
@@ -304,7 +304,7 @@ class AdmissionApproveRejectTest extends TestCase
         $application = $this->makeApplication();
 
         $this->withToken($token)
-            ->postJson("/api/v1/admissions/{$application->id}/reject", ['rejection_reason' => 'Incomplete documents'])
+            ->postJson("/api/v1/admissions/{$application->public_id}/reject", ['rejection_reason' => 'Incomplete documents'])
             ->assertOk()
             ->assertJsonPath('message', 'Application rejected.');
 
@@ -315,7 +315,7 @@ class AdmissionApproveRejectTest extends TestCase
 
         // A rejected application can never be approved later (409).
         $this->withToken($token)
-            ->postJson("/api/v1/admissions/{$application->id}/approve", $this->approvePayload())
+            ->postJson("/api/v1/admissions/{$application->public_id}/approve", $this->approvePayload())
             ->assertStatus(409)
             ->assertJsonPath('message', 'Application has already been reviewed.');
 
@@ -330,7 +330,7 @@ class AdmissionApproveRejectTest extends TestCase
         $application = $this->makeApplication();
 
         $this->withToken($this->tokenForRole('admin'))
-            ->postJson("/api/v1/admissions/{$application->id}/reject", [])
+            ->postJson("/api/v1/admissions/{$application->public_id}/reject", [])
             ->assertStatus(422)
             ->assertJsonValidationErrors('rejection_reason');
     }
@@ -342,7 +342,7 @@ class AdmissionApproveRejectTest extends TestCase
         $foreign = $this->makeApplication(['desired_class_id' => $otherClass->id], $otherBranch);
 
         $this->withToken($this->tokenForRole('admin'))
-            ->postJson("/api/v1/admissions/{$foreign->id}/approve", $this->approvePayload())
+            ->postJson("/api/v1/admissions/{$foreign->public_id}/approve", $this->approvePayload())
             ->assertStatus(404);
     }
 }

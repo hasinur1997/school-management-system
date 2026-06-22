@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\AdmissionStatus;
 use App\Models\Concerns\BelongsToBranch;
+use App\Models\Concerns\HasPublicId;
 use Database\Factories\AdmissionApplicationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -32,7 +33,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 class AdmissionApplication extends Model implements HasMedia
 {
     /** @use HasFactory<AdmissionApplicationFactory> */
-    use BelongsToBranch, HasFactory, InteractsWithMedia;
+    use BelongsToBranch, HasFactory, HasPublicId, InteractsWithMedia;
 
     /**
      * The model's default values for attributes.

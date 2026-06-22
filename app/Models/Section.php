@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToBranchThroughClass;
+use App\Models\Concerns\HasPublicId;
 use Database\Factories\SectionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Section extends Model
 {
     /** @use HasFactory<SectionFactory> */
-    use BelongsToBranchThroughClass, HasFactory;
+    use BelongsToBranchThroughClass, HasFactory, HasPublicId;
 
     /**
      * Get the class the section belongs to.

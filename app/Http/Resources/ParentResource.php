@@ -21,7 +21,7 @@ class ParentResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
+            'id' => $this->public_id,
             'name' => $this->name,
             'phone' => $this->phone,
             'email' => $this->user?->email,

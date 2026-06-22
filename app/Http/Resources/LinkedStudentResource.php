@@ -25,7 +25,7 @@ class LinkedStudentResource extends JsonResource
         $enrollment = $this->currentEnrollment;
 
         return [
-            'id' => $this->id,
+            'id' => $this->public_id,
             'name_en' => $this->name_en,
             'class' => $enrollment?->schoolClass?->name,
             'section' => $enrollment?->section?->name,

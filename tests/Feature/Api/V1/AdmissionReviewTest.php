@@ -105,15 +105,15 @@ class AdmissionReviewTest extends TestCase
 
         // search by name
         $this->withToken($token)->getJson('/api/v1/admissions?search=karim')
-            ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $karim->id);
+            ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $karim->public_id);
 
         // search by application_no
         $this->withToken($token)->getJson('/api/v1/admissions?search='.$karim->application_no)
-            ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $karim->id);
+            ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $karim->public_id);
 
         // search by father_mobile
         $this->withToken($token)->getJson('/api/v1/admissions?search=01711111111')
-            ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $karim->id);
+            ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $karim->public_id);
     }
 
     public function test_show_returns_full_detail(): void
@@ -124,8 +124,9 @@ class AdmissionReviewTest extends TestCase
         AdmissionPreviousEducation::factory()->count(2)->create(['application_id' => $application->id]);
 
         $this->withToken($this->tokenForRole('admin'))
-            ->getJson("/api/v1/admissions/{$application->id}")
+            ->getJson("/api/v1/admissions/{$application->public_id}")
             ->assertOk()
+            ->assertJsonPath('data.id', $application->public_id)
             ->assertJsonPath('data.name_en', 'Karim Hossain')
             ->assertJsonPath('data.desired_class.id', $this->class->id)
             ->assertJsonPath('data.name_bn', $application->name_bn)
@@ -136,6 +137,15 @@ class AdmissionReviewTest extends TestCase
             ->assertJsonPath('data.documents.0.name', 'marksheet.pdf')
             ->assertJsonPath('data.documents.0.url', fn ($url) => is_string($url) && $url !== '')
             ->assertJsonPath('data.photo_url', fn ($url) => is_string($url) && $url !== '');
+    }
+
+    public function test_numeric_database_id_does_not_resolve_admission_route(): void
+    {
+        $application = $this->makeApplication();
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->getJson("/api/v1/admissions/{$application->id}")
+            ->assertStatus(404);
     }
 
     public function test_cross_branch_application_is_not_found(): void
@@ -151,7 +161,7 @@ class AdmissionReviewTest extends TestCase
             ->assertOk()->assertJsonCount(0, 'data');
 
         // Not viewable
-        $this->withToken($token)->getJson("/api/v1/admissions/{$foreign->id}")
+        $this->withToken($token)->getJson("/api/v1/admissions/{$foreign->public_id}")
             ->assertStatus(404);
     }
 

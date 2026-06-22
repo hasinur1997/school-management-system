@@ -24,9 +24,9 @@ class StudentResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'user_id' => $this->user_id,
-            'application_id' => $this->application_id,
+            'id' => $this->public_id,
+            'user_id' => $this->whenLoaded('user', fn () => $this->user->public_id),
+            'application_id' => $this->whenLoaded('application', fn () => $this->application?->public_id),
             'admission_no' => $this->admission_no,
 
             'name_bn' => $this->name_bn,
@@ -66,17 +66,17 @@ class StudentResource extends JsonResource
             'photo_url' => $this->photoUrl(),
 
             'enrollments' => $this->whenLoaded('enrollments', fn () => $this->enrollments->map(fn (Enrollment $enrollment): array => [
-                'id' => $enrollment->id,
+                'id' => $enrollment->public_id,
                 'session' => $enrollment->session === null ? null : [
-                    'id' => $enrollment->session->id,
+                    'id' => $enrollment->session->public_id,
                     'name' => $enrollment->session->name,
                 ],
                 'class' => $enrollment->schoolClass === null ? null : [
-                    'id' => $enrollment->schoolClass->id,
+                    'id' => $enrollment->schoolClass->public_id,
                     'name' => $enrollment->schoolClass->name,
                 ],
                 'section' => $enrollment->section === null ? null : [
-                    'id' => $enrollment->section->id,
+                    'id' => $enrollment->section->public_id,
                     'name' => $enrollment->section->name,
                 ],
                 'roll_no' => $enrollment->roll_no,

@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Api\ApiController;
 use App\Http\Requests\Role\SyncRolePermissionsRequest;
 use App\Http\Resources\RoleResource;
+use App\Models\Role;
 use App\Services\RoleService;
 use Illuminate\Http\JsonResponse;
-use Spatie\Permission\Models\Role;
 
 class RoleController extends ApiController
 {

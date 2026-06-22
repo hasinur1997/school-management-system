@@ -121,6 +121,7 @@ class PromotionService
                 $enrollment = $entry['enrollment'];
 
                 $promotedRows[] = [
+                    'public_id' => Enrollment::newPublicId(),
                     'student_id' => $enrollment->student_id,
                     'session_id' => $toSessionId,
                     'class_id' => $toClassId,
@@ -138,6 +139,7 @@ class PromotionService
                 // Re-enrolled in the same class for the new session, keeping
                 // their section and roll.
                 $heldRows[] = [
+                    'public_id' => Enrollment::newPublicId(),
                     'student_id' => $enrollment->student_id,
                     'session_id' => $toSessionId,
                     'class_id' => $fromClassId,
@@ -187,6 +189,7 @@ class PromotionService
                 $enrollment = $entry['enrollment'];
 
                 $logs[] = [
+                    'public_id' => Promotion::newPublicId(),
                     'student_id' => $enrollment->student_id,
                     'from_enrollment_id' => $enrollment->id,
                     'to_enrollment_id' => $newEnrollmentIds->get($enrollment->student_id),
@@ -200,6 +203,7 @@ class PromotionService
 
             foreach ($failed as $enrollment) {
                 $logs[] = [
+                    'public_id' => Promotion::newPublicId(),
                     'student_id' => $enrollment->student_id,
                     'from_enrollment_id' => $enrollment->id,
                     'to_enrollment_id' => null,
@@ -256,7 +260,7 @@ class PromotionService
                 ->where('student_id', $studentId)
                 ->where('status', EnrollmentStatus::Active->value)
                 ->whereHas('student')
-                ->with(['student:id,name_en,admission_no', 'schoolClass:id,name', 'session:id,name'])
+                ->with(['student:id,public_id,name_en,admission_no', 'schoolClass:id,public_id,name', 'session:id,public_id,name'])
                 ->orderByDesc('session_id')
                 ->first();
 
@@ -342,11 +346,11 @@ class PromotionService
         $query = Promotion::query()
             ->whereHas('student')
             ->with([
-                'student:id,name_en',
+                'student:id,public_id,name_en',
                 'fromEnrollment:id,class_id',
-                'fromEnrollment.schoolClass:id,name',
+                'fromEnrollment.schoolClass:id,public_id,name',
                 'toEnrollment:id,class_id',
-                'toEnrollment.schoolClass:id,name',
+                'toEnrollment.schoolClass:id,public_id,name',
             ])
             ->latest('promoted_at')
             ->latest('id');
@@ -394,7 +398,7 @@ class PromotionService
             ->where('session_id', $sessionId)
             ->where('class_id', $classId)
             ->whereIn('status', [EnrollmentStatus::Active->value, EnrollmentStatus::Tc->value])
-            ->with('student:id,name_en')
+            ->with('student:id,public_id,name_en')
             ->orderBy('roll_no')
             ->get();
 

@@ -29,7 +29,7 @@ class ClassService
      */
     public function listSections(SchoolClass $class): Collection
     {
-        return $class->sections()->orderBy('name')->get();
+        return $class->sections()->with('schoolClass')->orderBy('name')->get();
     }
 
     /**
@@ -43,7 +43,7 @@ class ClassService
 
         $this->structure->forgetClassLists($class->branch_id);
 
-        return $class;
+        return $class->load(['branch', 'sections.schoolClass']);
     }
 
     /**
@@ -57,7 +57,7 @@ class ClassService
 
         $this->structure->forgetClassLists($class->branch_id);
 
-        return $class;
+        return $class->load(['branch', 'sections.schoolClass']);
     }
 
     /**
@@ -81,7 +81,7 @@ class ClassService
 
         $this->structure->forgetClassLists($class->branch_id);
 
-        return $section;
+        return $section->load('schoolClass');
     }
 
     /**
@@ -95,7 +95,7 @@ class ClassService
 
         $this->structure->forgetClassLists($section->loadMissing('schoolClass')->schoolClass->branch_id);
 
-        return $section;
+        return $section->load('schoolClass');
     }
 
     /**

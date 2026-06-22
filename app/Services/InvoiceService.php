@@ -117,6 +117,7 @@ class InvoiceService
                 $seq++;
 
                 $rows[] = [
+                    'public_id' => Invoice::newPublicId(),
                     'branch_id' => $branchId,
                     'student_id' => $enrollment->student_id,
                     'enrollment_id' => $enrollment->id,
@@ -151,7 +152,7 @@ class InvoiceService
     public function list(array $filters, int $perPage): LengthAwarePaginator
     {
         return Invoice::query()
-            ->with('student:id,name_en')
+            ->with('student:id,public_id,name_en')
             ->when(isset($filters['student_id']), fn (Builder $query) => $query->where('student_id', $filters['student_id']))
             ->when(isset($filters['status']), fn (Builder $query) => $query->where('status', $filters['status']))
             ->when(isset($filters['month']), fn (Builder $query) => $query->where('month', $filters['month']))
@@ -174,10 +175,23 @@ class InvoiceService
         // their own invoice.
         return Invoice::query()
             ->with([
-                'student:id,name_en,user_id',
+                'student:id,public_id,name_en,user_id',
                 'payments' => fn ($query) => $query->latest('id'),
             ])
             ->findOrFail($id);
+    }
+
+    /**
+     * Load one branch-scoped invoice for the detail view.
+     */
+    public function loadDetail(Invoice $invoice): Invoice
+    {
+        // user_id is needed by StudentPolicy::viewInvoices to match a student to
+        // their own invoice.
+        return $invoice->load([
+            'student:id,public_id,name_en,user_id',
+            'payments' => fn ($query) => $query->latest('id'),
+        ]);
     }
 
     /**
@@ -188,7 +202,7 @@ class InvoiceService
     public function forStudent(Student $student, ?int $year, int $perPage): LengthAwarePaginator
     {
         return Invoice::query()
-            ->with('student:id,name_en')
+            ->with('student:id,public_id,name_en')
             ->where('student_id', $student->id)
             ->when($year !== null, fn (Builder $query) => $query->where('year', $year))
             ->orderByDesc('year')

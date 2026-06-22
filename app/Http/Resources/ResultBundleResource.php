@@ -29,7 +29,7 @@ class ResultBundleResource extends JsonResource
 
         return [
             'student' => [
-                'id' => $student->id,
+                'id' => $student->public_id,
                 'name_en' => $student->name_en,
                 'admission_no' => $student->admission_no,
                 'class' => $enrollment->schoolClass?->name,

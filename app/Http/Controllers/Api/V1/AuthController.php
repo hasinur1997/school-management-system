@@ -38,7 +38,7 @@ class AuthController extends ApiController
      */
     public function me(Request $request): JsonResponse
     {
-        return $this->success(UserResource::make($request->user()->load('media')));
+        return $this->success(UserResource::make($request->user()->load(['branch', 'media'])));
     }
 
     /**

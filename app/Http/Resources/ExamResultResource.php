@@ -22,7 +22,7 @@ class ExamResultResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'enrollment_id' => $this->enrollment_id,
+            'enrollment_id' => $this->whenLoaded('enrollment', fn () => $this->enrollment->public_id),
             'roll_no' => $this->whenLoaded('enrollment', fn () => $this->enrollment->roll_no),
             'name_en' => $this->whenLoaded('enrollment', fn () => $this->enrollment->student->name_en),
             'total_marks' => $this->total_marks,

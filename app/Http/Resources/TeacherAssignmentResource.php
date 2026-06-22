@@ -23,30 +23,30 @@ class TeacherAssignmentResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'teacher_id' => $this->teacher_id,
-            'session_id' => $this->session_id,
-            'class_id' => $this->class_id,
-            'section_id' => $this->section_id,
-            'subject_id' => $this->subject_id,
+            'id' => $this->public_id,
+            'teacher_id' => $this->whenLoaded('teacher', fn () => $this->teacher->public_id),
+            'session_id' => $this->whenLoaded('session', fn () => $this->session->public_id),
+            'class_id' => $this->whenLoaded('schoolClass', fn () => $this->schoolClass->public_id),
+            'section_id' => $this->whenLoaded('section', fn () => $this->section?->public_id),
+            'subject_id' => $this->whenLoaded('subject', fn () => $this->subject?->public_id),
             'teacher' => $this->whenLoaded('teacher', fn (): array => [
-                'id' => $this->teacher->id,
+                'id' => $this->teacher->public_id,
                 'name' => $this->teacher->name,
             ]),
             'class' => $this->whenLoaded('schoolClass', fn (): array => [
-                'id' => $this->schoolClass->id,
+                'id' => $this->schoolClass->public_id,
                 'name' => $this->schoolClass->name,
             ]),
             'session' => $this->whenLoaded('session', fn (): array => [
-                'id' => $this->session->id,
+                'id' => $this->session->public_id,
                 'name' => $this->session->name,
             ]),
             'section' => $this->whenLoaded('section', fn () => $this->section === null ? null : [
-                'id' => $this->section->id,
+                'id' => $this->section->public_id,
                 'name' => $this->section->name,
             ]),
             'subject' => $this->whenLoaded('subject', fn () => $this->subject === null ? null : [
-                'id' => $this->subject->id,
+                'id' => $this->subject->public_id,
                 'name' => $this->subject->name,
             ]),
         ];

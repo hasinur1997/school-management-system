@@ -25,7 +25,7 @@ class MarkSheetResource extends JsonResource
 
         return [
             'exam' => [
-                'id' => $this->resource['exam']->id,
+                'id' => $this->resource['exam']->public_id,
                 'name' => $this->resource['exam']->name,
             ],
             'subject' => [
@@ -36,7 +36,7 @@ class MarkSheetResource extends JsonResource
                 $mark = $marks->get($enrollment->id);
 
                 return [
-                    'enrollment_id' => $enrollment->id,
+                    'enrollment_id' => $enrollment->public_id,
                     'roll_no' => $enrollment->roll_no,
                     'name_en' => $enrollment->student->name_en,
                     'obtained_marks' => $mark !== null ? (float) $mark->obtained_marks : null,

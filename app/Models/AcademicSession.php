@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPublicId;
 use Database\Factories\AcademicSessionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 class AcademicSession extends Model
 {
     /** @use HasFactory<AcademicSessionFactory> */
-    use HasFactory;
+    use HasFactory, HasPublicId;
 
     /**
      * The model's default values for attributes.

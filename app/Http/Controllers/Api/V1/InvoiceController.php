@@ -52,9 +52,9 @@ class InvoiceController extends ApiController
      * StudentPolicy::viewInvoices — staff (invoice.view), the student itself, or
      * a linked parent; a denial hides existence (404).
      */
-    public function show(Request $request, int $id): JsonResponse
+    public function show(Request $request, Invoice $invoice): JsonResponse
     {
-        $invoice = $this->invoices->find($id);
+        $invoice = $this->invoices->loadDetail($invoice);
 
         if ($request->user()->cannot('viewInvoices', $invoice->student)) {
             abort(404);

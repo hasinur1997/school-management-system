@@ -28,7 +28,7 @@ class OnlinePaymentInitResource extends JsonResource
         $session = $this->resource['session'];
 
         return [
-            'payment_id' => $payment->id,
+            'payment_id' => $payment->public_id,
             'transaction_id' => $payment->transaction_id,
             'gateway_url' => $session->gatewayUrl,
         ];

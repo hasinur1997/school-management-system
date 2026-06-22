@@ -59,6 +59,8 @@ class StudentService
     {
         return $student->load([
             'media',
+            'user',
+            'application',
             'enrollments' => fn ($query) => $query
                 ->latest('id')
                 ->with(['session', 'schoolClass', 'section']),
@@ -91,6 +93,8 @@ class StudentService
 
         return $student->load([
             'media',
+            'user',
+            'application',
             'enrollments' => fn ($query) => $query
                 ->latest('id')
                 ->with(['session', 'schoolClass', 'section']),

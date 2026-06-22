@@ -44,7 +44,7 @@ class AcademicStructureService
             fn (): Collection => SchoolClass::query()
                 ->where('is_active', true)
                 ->when($filter !== null, fn (Builder $query) => $query->where('branch_id', $filter))
-                ->with(['sections' => fn ($query) => $query->orderBy('name')])
+                ->with(['branch', 'sections' => fn ($query) => $query->with('schoolClass')->orderBy('name')])
                 ->orderBy('numeric_level')
                 ->get(),
         );
@@ -60,7 +60,7 @@ class AcademicStructureService
         return Cache::remember(
             $this->subjectListKey($class->id),
             now()->addHour(),
-            fn (): Collection => $class->subjects()->orderBy('name')->get(),
+            fn (): Collection => $class->subjects()->with('schoolClass')->orderBy('name')->get(),
         );
     }
 
@@ -75,7 +75,7 @@ class AcademicStructureService
 
         $this->forgetSubjectList($class->id);
 
-        return $subject;
+        return $subject->load('schoolClass');
     }
 
     /**
@@ -89,7 +89,7 @@ class AcademicStructureService
 
         $this->forgetSubjectList($subject->class_id);
 
-        return $subject;
+        return $subject->load('schoolClass');
     }
 
     /**

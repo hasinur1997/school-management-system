@@ -38,7 +38,7 @@ class IdCardController extends ApiController
         );
 
         return $this->success(
-            ['batch_id' => $batch->id, 'status' => $batch->status->value],
+            ['batch_id' => $batch->public_id, 'status' => $batch->status->value],
             'ID card batch queued',
             Response::HTTP_ACCEPTED,
         );

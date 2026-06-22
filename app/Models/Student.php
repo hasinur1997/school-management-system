@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\StudentStatus;
 use App\Models\Concerns\BelongsToBranch;
+use App\Models\Concerns\HasPublicId;
 use Database\Factories\StudentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -36,7 +37,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 class Student extends Model implements HasMedia
 {
     /** @use HasFactory<StudentFactory> */
-    use BelongsToBranch, HasFactory, InteractsWithMedia, SoftDeletes;
+    use BelongsToBranch, HasFactory, HasPublicId, InteractsWithMedia, SoftDeletes;
 
     /**
      * The model's default values for attributes.

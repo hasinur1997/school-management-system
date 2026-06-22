@@ -79,6 +79,7 @@ class MarkService
             $resolved = $this->grades->resolve($row['obtained_marks']);
 
             return [
+                'public_id' => Mark::newPublicId(),
                 'exam_id' => $exam->id,
                 'enrollment_id' => $row['enrollment_id'],
                 'subject_id' => $subjectId,

@@ -74,19 +74,17 @@ class PaymentController extends ApiController
      * Stream the money receipt PDF for a paid payment. Authorized via
      * StudentPolicy::viewInvoices (staff invoice.view / self / linked parent);
      * a denial or a non-paid payment hides existence (404). Out-of-branch
-     * {id} 404s via BranchScope.
+     * payments 404 via BranchScope.
      */
-    public function receipt(Request $request, int $id): Response
+    public function receipt(Request $request, Payment $payment): Response
     {
-        $payment = Payment::query()
-            ->with([
-                'invoice.student:id,name_en,user_id',
-                'invoice.enrollment.schoolClass:id,name',
-                'invoice.enrollment.section:id,name',
-                'branch:id,name,address,phone',
-                'collector:id,name',
-            ])
-            ->findOrFail($id);
+        $payment->load([
+            'invoice.student:id,public_id,name_en,user_id',
+            'invoice.enrollment.schoolClass:id,public_id,name',
+            'invoice.enrollment.section:id,public_id,name',
+            'branch:id,public_id,name,address,phone',
+            'collector:id,public_id,name',
+        ]);
 
         if ($payment->status !== PaymentStatus::Paid) {
             abort(404);

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToBranchThroughClass;
+use App\Models\Concerns\HasPublicId;
 use Database\Factories\TeacherAssignmentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,7 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class TeacherAssignment extends Model
 {
     /** @use HasFactory<TeacherAssignmentFactory> */
-    use BelongsToBranchThroughClass, HasFactory;
+    use BelongsToBranchThroughClass, HasFactory, HasPublicId;
 
     /**
      * Get the class the assignment belongs to. Required by

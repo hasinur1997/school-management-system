@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\AssetStatus;
 use App\Models\Concerns\BelongsToBranch;
+use App\Models\Concerns\HasPublicId;
 use Database\Factories\AssetFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,7 +21,7 @@ use Illuminate\Database\Eloquent\Model;
 class Asset extends Model
 {
     /** @use HasFactory<AssetFactory> */
-    use BelongsToBranch, HasFactory;
+    use BelongsToBranch, HasFactory, HasPublicId;
 
     /**
      * Get the attributes that should be cast.

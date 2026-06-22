@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\IdCardBatchStatus;
 use App\Models\Concerns\BelongsToBranch;
+use App\Models\Concerns\HasPublicId;
 use Database\Factories\IdCardBatchFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -20,7 +21,7 @@ use Illuminate\Database\Eloquent\Model;
 class IdCardBatch extends Model
 {
     /** @use HasFactory<IdCardBatchFactory> */
-    use BelongsToBranch, HasFactory, HasUuids;
+    use BelongsToBranch, HasFactory, HasPublicId, HasUuids;
 
     /**
      * The model's default values for attributes.

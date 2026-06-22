@@ -18,6 +18,7 @@ class ExamService
     public function list(array $filters, int $perPage): LengthAwarePaginator
     {
         return Exam::query()
+            ->with(['session', 'schoolClass'])
             ->when(isset($filters['session_id']), fn (Builder $query) => $query->where('session_id', $filters['session_id']))
             ->when(isset($filters['class_id']), fn (Builder $query) => $query->where('class_id', $filters['class_id']))
             ->when(isset($filters['type']), fn (Builder $query) => $query->where('type', $filters['type']))
@@ -38,7 +39,8 @@ class ExamService
     {
         $class = SchoolClass::findOrFail($data['class_id']);
 
-        return Exam::create([...$data, 'branch_id' => $class->branch_id]);
+        return Exam::create([...$data, 'branch_id' => $class->branch_id])
+            ->load(['session', 'schoolClass']);
     }
 
     /**
@@ -53,6 +55,6 @@ class ExamService
         $exam->fill(array_intersect_key($data, array_flip(['name', 'start_date', 'end_date', 'status'])));
         $exam->save();
 
-        return $exam;
+        return $exam->load(['session', 'schoolClass']);
     }
 }

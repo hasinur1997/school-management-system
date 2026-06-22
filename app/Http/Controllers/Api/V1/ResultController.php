@@ -91,9 +91,9 @@ class ResultController extends ApiController
      * linked parent; a denial hides existence (404). Staff see unpublished
      * results flagged; students/parents see published results only.
      */
-    public function enrollmentResults(Request $request, int $id): JsonResponse
+    public function enrollmentResults(Request $request, Enrollment $enrollment): JsonResponse
     {
-        $enrollment = $this->results->resolveEnrollment($id);
+        $enrollment = $this->results->loadEnrollment($enrollment);
         $user = $request->user();
 
         if ($user->cannot('viewResults', $enrollment->student)) {
