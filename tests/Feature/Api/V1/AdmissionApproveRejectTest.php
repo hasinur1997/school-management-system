@@ -89,7 +89,7 @@ class AdmissionApproveRejectTest extends TestCase
             'name_bn' => 'করিম হোসেন',
             'father_mobile' => '01711111111',
             'present_village' => 'Shibganj',
-            'permanent_village_bn' => 'শিবগঞ্জ',
+            'permanent_village' => 'শিবগঞ্জ',
         ]);
         $application->addMedia(UploadedFile::fake()->image('photo.jpg'))->toMediaCollection('photo');
 
@@ -109,12 +109,12 @@ class AdmissionApproveRejectTest extends TestCase
 
         $studentId = $response->json('data.student.id');
 
-        // Application data copied faithfully (bilingual + address fields).
+        // Application data copied faithfully (identity + address fields).
         $student = Student::find($studentId);
         $this->assertSame('Karim Hossain', $student->name_en);
         $this->assertSame('করিম হোসেন', $student->name_bn);
         $this->assertSame('Shibganj', $student->present_village);
-        $this->assertSame('শিবগঞ্জ', $student->permanent_village_bn);
+        $this->assertSame('শিবগঞ্জ', $student->permanent_village);
         $this->assertSame('01711111111', $student->father_mobile);
         $this->assertSame(StudentStatus::Active, $student->status);
         $this->assertSame($application->id, $student->application_id);

@@ -14,4 +14,4 @@
 | DELETE | /parents/{id}/students/{student} | parent.manage | Unlink |
 | GET | /me/students | parent role | Parent's linked students (id, name, class, section, photo) |
 
-Student list rows return the compact shape: id, admission_no, name_en, name_bn, current class/section/roll, status, photo URL. Full bilingual address data only on `show`.
+Student list rows return the compact shape: id, admission_no, name_en, name_bn, current class/section/roll, status, photo URL. Full structured address data only on `show`.

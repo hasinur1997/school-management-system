@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * The full bilingual student profile for the show endpoint: every schema field
+ * The full student profile for the show endpoint: every schema field
  * plus a class-history enrollments summary and the photo URL. The enrollments
  * key is only present when eager loaded.
  *
@@ -44,16 +44,13 @@ class StudentResource extends JsonResource
             'present_post_office' => $this->present_post_office,
             'present_upazila' => $this->present_upazila,
             'present_district' => $this->present_district,
+            'present_division' => $this->present_division,
 
-            'permanent_village_bn' => $this->permanent_village_bn,
-            'permanent_post_office_bn' => $this->permanent_post_office_bn,
-            'permanent_upazila_bn' => $this->permanent_upazila_bn,
-            'permanent_district_bn' => $this->permanent_district_bn,
-
-            'permanent_village_en' => $this->permanent_village_en,
-            'permanent_post_office_en' => $this->permanent_post_office_en,
-            'permanent_upazila_en' => $this->permanent_upazila_en,
-            'permanent_district_en' => $this->permanent_district_en,
+            'permanent_village' => $this->permanent_village,
+            'permanent_post_office' => $this->permanent_post_office,
+            'permanent_upazila' => $this->permanent_upazila,
+            'permanent_district' => $this->permanent_district,
+            'permanent_division' => $this->permanent_division,
 
             'father_mobile' => $this->father_mobile,
             'mother_mobile' => $this->mother_mobile,

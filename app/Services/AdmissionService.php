@@ -187,14 +187,13 @@ class AdmissionService
             $admissionNo = $data['admission_no']
                 ?? $this->admissionNos->generate($branchId, (int) $session->start_date->year);
 
-            // Copy the application's bilingual identity + address fields verbatim.
+            // Copy the application's identity + address fields verbatim.
             $student = new Student($application->only([
                 'name_bn', 'name_en',
                 'father_name_bn', 'father_name_en', 'father_nid',
                 'mother_name_bn', 'mother_name_en', 'mother_nid',
-                'present_village', 'present_post_office', 'present_upazila', 'present_district',
-                'permanent_village_bn', 'permanent_post_office_bn', 'permanent_upazila_bn', 'permanent_district_bn',
-                'permanent_village_en', 'permanent_post_office_en', 'permanent_upazila_en', 'permanent_district_en',
+                'present_village', 'present_post_office', 'present_upazila', 'present_district', 'present_division',
+                'permanent_village', 'permanent_post_office', 'permanent_upazila', 'permanent_district', 'permanent_division',
                 'father_mobile', 'mother_mobile',
                 'birth_reg_no', 'date_of_birth', 'religion', 'nationality', 'caste',
             ]));

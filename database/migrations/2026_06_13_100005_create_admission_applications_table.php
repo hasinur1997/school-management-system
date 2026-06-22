@@ -36,20 +36,16 @@ return new class extends Migration
             $table->string('present_post_office', 100);
             $table->string('present_upazila', 100);
             $table->string('present_district', 100);
+            $table->string('present_division', 100);
             $table->string('father_mobile', 20);
 
             // Item 7 — permanent address (bn) + mother mobile
-            $table->string('permanent_village_bn', 100);
-            $table->string('permanent_post_office_bn', 100);
-            $table->string('permanent_upazila_bn', 100);
-            $table->string('permanent_district_bn', 100);
+            $table->string('permanent_village', 100);
+            $table->string('permanent_post_office', 100);
+            $table->string('permanent_upazila', 100);
+            $table->string('permanent_district', 100);
+            $table->string('permanent_division', 100);
             $table->string('mother_mobile', 20);
-
-            // Item 8 — permanent address (en)
-            $table->string('permanent_village_en', 100);
-            $table->string('permanent_post_office_en', 100);
-            $table->string('permanent_upazila_en', 100);
-            $table->string('permanent_district_en', 100);
 
             // Items 9–11 — identity
             $table->string('birth_reg_no', 25)->unique();

@@ -51,20 +51,16 @@ class StoreAdmissionRequest extends FormRequest
             'present_post_office' => ['required', 'string', 'max:100'],
             'present_upazila' => ['required', 'string', 'max:100'],
             'present_district' => ['required', 'string', 'max:100'],
+            'present_division' => ['required', 'string', 'max:100'],
             'father_mobile' => ['required', 'string', 'max:20'],
 
-            // Item 7 — permanent address (bn) + mother mobile
-            'permanent_village_bn' => ['required', 'string', 'max:100'],
-            'permanent_post_office_bn' => ['required', 'string', 'max:100'],
-            'permanent_upazila_bn' => ['required', 'string', 'max:100'],
-            'permanent_district_bn' => ['required', 'string', 'max:100'],
+            // Item 7 — permanent address + mother mobile
+            'permanent_village' => ['required', 'string', 'max:100'],
+            'permanent_post_office' => ['required', 'string', 'max:100'],
+            'permanent_upazila' => ['required', 'string', 'max:100'],
+            'permanent_district' => ['required', 'string', 'max:100'],
+            'permanent_division' => ['required', 'string', 'max:100'],
             'mother_mobile' => ['nullable', 'string', 'max:20'],
-
-            // Item 8 — permanent address (en)
-            'permanent_village_en' => ['required', 'string', 'max:100'],
-            'permanent_post_office_en' => ['required', 'string', 'max:100'],
-            'permanent_upazila_en' => ['required', 'string', 'max:100'],
-            'permanent_district_en' => ['required', 'string', 'max:100'],
 
             // Items 9–11 — identity
             'birth_reg_no' => ['required', 'string', 'max:25', Rule::unique('admission_applications', 'birth_reg_no')],

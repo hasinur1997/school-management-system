@@ -8,7 +8,7 @@ Key decisions derived from the requirements:
 
 1. **One `users` table for all six roles.** Authentication is uniform (Sanctum); role-specific data lives in profile tables (`teachers`, `students`, `parents`). Roles/permissions come from spatie tables, not a `role` column.
 2. **Admission data is kept separate from student data.** The public form writes to `admission_applications` (+ a child table for previous education). On approval, a `students` row and `users` row are created and the application is linked, preserving the original submission as an audit record.
-3. **Bilingual fields.** The paper form captures Bangla and English for names and addresses, so those are paired `_bn` / `_en` columns. Addresses are structured (village / post office / upazila / district), not free text.
+3. **Bilingual name fields.** The paper form captures Bangla and English names, so name fields are paired `_bn` / `_en` columns. Addresses are structured (village / post office / upazila / district / division), not free text.
 4. **Enrollment is session-based.** A student's membership in a class+section for an academic session is an `enrollments` row. Promotion = closing the current enrollment and creating the next one; `promotions` logs the action. This gives full class history per student.
 5. **Results are persisted snapshots.** `exam_results` (per exam) and `annual_results` (25/25/50 weighted) are computed and stored at publication so they are immutable against later grading-scale edits.
 6. **Fees:** `fee_structures` defines the monthly amount per class/branch/session → `invoices` are generated monthly per student → `payments` settle invoices → a paid fee auto-creates an `incomes` row (linked back to the payment).
@@ -165,16 +165,14 @@ Public form submission — mirrors the paper form.
 | present_post_office | VARCHAR(100) | |
 | present_upazila | VARCHAR(100) | |
 | present_district | VARCHAR(100) | |
+| present_division | VARCHAR(100) | |
 | father_mobile | VARCHAR(20) | item 6 |
-| permanent_village_bn | VARCHAR(100) | item 7 |
-| permanent_post_office_bn | VARCHAR(100) | |
-| permanent_upazila_bn | VARCHAR(100) | |
-| permanent_district_bn | VARCHAR(100) | |
+| permanent_village | VARCHAR(100) | item 7 |
+| permanent_post_office | VARCHAR(100) | |
+| permanent_upazila | VARCHAR(100) | |
+| permanent_district | VARCHAR(100) | |
+| permanent_division | VARCHAR(100) | |
 | mother_mobile | VARCHAR(20) | item 7 |
-| permanent_village_en | VARCHAR(100) | item 8 |
-| permanent_post_office_en | VARCHAR(100) | |
-| permanent_upazila_en | VARCHAR(100) | |
-| permanent_district_en | VARCHAR(100) | |
 | birth_reg_no | VARCHAR(25) | item 9, unique |
 | date_of_birth | DATE | item 10 |
 | religion | VARCHAR(50) | item 11 |
@@ -223,14 +221,12 @@ Created at admission approval; office-use fields assigned here.
 | present_post_office | VARCHAR(100) | |
 | present_upazila | VARCHAR(100) | |
 | present_district | VARCHAR(100) | |
-| permanent_village_bn | VARCHAR(100) | |
-| permanent_post_office_bn | VARCHAR(100) | |
-| permanent_upazila_bn | VARCHAR(100) | |
-| permanent_district_bn | VARCHAR(100) | |
-| permanent_village_en | VARCHAR(100) | |
-| permanent_post_office_en | VARCHAR(100) | |
-| permanent_upazila_en | VARCHAR(100) | |
-| permanent_district_en | VARCHAR(100) | |
+| present_division | VARCHAR(100) | |
+| permanent_village | VARCHAR(100) | |
+| permanent_post_office | VARCHAR(100) | |
+| permanent_upazila | VARCHAR(100) | |
+| permanent_district | VARCHAR(100) | |
+| permanent_division | VARCHAR(100) | |
 | father_mobile | VARCHAR(20) | |
 | mother_mobile | VARCHAR(20) | nullable |
 | birth_reg_no | VARCHAR(25) | unique |

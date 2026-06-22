@@ -50,20 +50,16 @@ class AdmissionDetailResource extends JsonResource
             'present_post_office' => $this->present_post_office,
             'present_upazila' => $this->present_upazila,
             'present_district' => $this->present_district,
+            'present_division' => $this->present_division,
             'father_mobile' => $this->father_mobile,
 
-            // Item 7 — permanent address (bn) + mother mobile
-            'permanent_village_bn' => $this->permanent_village_bn,
-            'permanent_post_office_bn' => $this->permanent_post_office_bn,
-            'permanent_upazila_bn' => $this->permanent_upazila_bn,
-            'permanent_district_bn' => $this->permanent_district_bn,
+            // Item 7 — permanent address + mother mobile
+            'permanent_village' => $this->permanent_village,
+            'permanent_post_office' => $this->permanent_post_office,
+            'permanent_upazila' => $this->permanent_upazila,
+            'permanent_district' => $this->permanent_district,
+            'permanent_division' => $this->permanent_division,
             'mother_mobile' => $this->mother_mobile,
-
-            // Item 8 — permanent address (en)
-            'permanent_village_en' => $this->permanent_village_en,
-            'permanent_post_office_en' => $this->permanent_post_office_en,
-            'permanent_upazila_en' => $this->permanent_upazila_en,
-            'permanent_district_en' => $this->permanent_district_en,
 
             // Items 9–11 — identity
             'birth_reg_no' => $this->birth_reg_no,

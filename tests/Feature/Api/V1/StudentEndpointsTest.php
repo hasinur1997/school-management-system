@@ -166,7 +166,7 @@ class StudentEndpointsTest extends TestCase
             ->getJson("/api/v1/students/{$student->id}")
             ->assertOk()
             ->assertJsonPath('data.id', $student->id)
-            ->assertJsonPath('data.permanent_district_en', $student->permanent_district_en)
+            ->assertJsonPath('data.permanent_district', $student->permanent_district)
             ->assertJsonCount(1, 'data.enrollments')
             ->assertJsonPath('data.enrollments.0.roll_no', 5);
     }
@@ -286,14 +286,12 @@ class StudentEndpointsTest extends TestCase
             'present_post_office' => 'Post',
             'present_upazila' => 'Upazila',
             'present_district' => 'District',
-            'permanent_village_bn' => 'গ্রাম',
-            'permanent_post_office_bn' => 'ডাকঘর',
-            'permanent_upazila_bn' => 'উপজেলা',
-            'permanent_district_bn' => 'জেলা',
-            'permanent_village_en' => 'Village',
-            'permanent_post_office_en' => 'Post',
-            'permanent_upazila_en' => 'Upazila',
-            'permanent_district_en' => 'District',
+            'present_division' => 'Division',
+            'permanent_village' => 'গ্রাম',
+            'permanent_post_office' => 'ডাকঘর',
+            'permanent_upazila' => 'উপজেলা',
+            'permanent_district' => 'জেলা',
+            'permanent_division' => 'বিভাগ',
             'father_mobile' => '01712345678',
             'date_of_birth' => '2014-01-01',
             'religion' => 'Islam',

@@ -20,7 +20,7 @@ The only public write endpoint in the system. Mirrors the paper form items 1–1
 
 ## API Contract
 ### POST /api/v1/public/admissions — Public
-Request (multipart): `name_bn, name_en, father_name_bn, father_name_en, father_nid?, mother_name_bn, mother_name_en, mother_nid?, present_village, present_post_office, present_upazila, present_district, father_mobile, permanent_*_bn ×4, mother_mobile?, permanent_*_en ×4, birth_reg_no, date_of_birth, religion, nationality, caste?, branch_id, desired_class_id, photo, documents[]?, previous_educations[][exam_name|institution_name|gpa|passing_year|board_roll|board_reg_no]?`
+Request (multipart): `name_bn, name_en, father_name_bn, father_name_en, father_nid?, mother_name_bn, mother_name_en, mother_nid?, present_village, present_post_office, present_upazila, present_district, present_division, father_mobile, permanent_village, permanent_post_office, permanent_upazila, permanent_district, permanent_division, mother_mobile?, birth_reg_no, date_of_birth, religion, nationality, caste?, branch_id, desired_class_id, photo, documents[]?, previous_educations[][exam_name|institution_name|gpa|passing_year|board_roll|board_reg_no]?`
 Success — 201:
 ```json
 { "success": true, "message": "Application submitted successfully.",

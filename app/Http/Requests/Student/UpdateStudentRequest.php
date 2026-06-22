@@ -38,16 +38,13 @@ class UpdateStudentRequest extends FormRequest
             'present_post_office' => ['required', 'string', 'max:100'],
             'present_upazila' => ['required', 'string', 'max:100'],
             'present_district' => ['required', 'string', 'max:100'],
+            'present_division' => ['required', 'string', 'max:100'],
 
-            'permanent_village_bn' => ['required', 'string', 'max:100'],
-            'permanent_post_office_bn' => ['required', 'string', 'max:100'],
-            'permanent_upazila_bn' => ['required', 'string', 'max:100'],
-            'permanent_district_bn' => ['required', 'string', 'max:100'],
-
-            'permanent_village_en' => ['required', 'string', 'max:100'],
-            'permanent_post_office_en' => ['required', 'string', 'max:100'],
-            'permanent_upazila_en' => ['required', 'string', 'max:100'],
-            'permanent_district_en' => ['required', 'string', 'max:100'],
+            'permanent_village' => ['required', 'string', 'max:100'],
+            'permanent_post_office' => ['required', 'string', 'max:100'],
+            'permanent_upazila' => ['required', 'string', 'max:100'],
+            'permanent_district' => ['required', 'string', 'max:100'],
+            'permanent_division' => ['required', 'string', 'max:100'],
 
             'father_mobile' => ['required', 'string', 'max:20'],
             'mother_mobile' => ['nullable', 'string', 'max:20'],

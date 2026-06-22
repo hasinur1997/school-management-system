@@ -66,15 +66,13 @@ class StudentFactory extends Factory
             'present_upazila' => fake()->city(),
             'present_district' => fake()->city(),
 
-            'permanent_village_bn' => 'গ্রাম',
-            'permanent_post_office_bn' => 'ডাকঘর',
-            'permanent_upazila_bn' => 'উপজেলা',
-            'permanent_district_bn' => 'জেলা',
+            'present_division' => fake()->city(),
 
-            'permanent_village_en' => fake()->streetName(),
-            'permanent_post_office_en' => fake()->city(),
-            'permanent_upazila_en' => fake()->city(),
-            'permanent_district_en' => fake()->city(),
+            'permanent_village' => 'গ্রাম',
+            'permanent_post_office' => 'ডাকঘর',
+            'permanent_upazila' => 'উপজেলা',
+            'permanent_district' => 'জেলা',
+            'permanent_division' => 'বিভাগ',
 
             'father_mobile' => fake()->numerify('017########'),
             'mother_mobile' => fake()->optional()->numerify('018########'),
