@@ -293,9 +293,17 @@ class AdmissionService
      */
     public function findForStatus(string $applicationNo, string $dateOfBirth): AdmissionApplication
     {
-        return AdmissionApplication::query()
+        $application = AdmissionApplication::query()
+            ->with(['branch', 'desiredClass', 'media'])
             ->where('application_no', $applicationNo)
             ->whereDate('date_of_birth', $dateOfBirth)
             ->firstOrFail();
+
+        $application->setRelation(
+            'currentSession',
+            AcademicSession::query()->where('is_current', true)->first(),
+        );
+
+        return $application;
     }
 }

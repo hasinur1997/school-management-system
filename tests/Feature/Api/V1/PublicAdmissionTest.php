@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api\V1;
 
+use App\Models\AcademicSession;
 use App\Models\AdmissionApplication;
 use App\Models\AdmissionPreviousEducation;
 use App\Models\Branch;
@@ -220,23 +221,51 @@ class PublicAdmissionTest extends TestCase
 
     public function test_status_check_returns_status_when_dob_matches(): void
     {
+        $session = AcademicSession::factory()->current()->create(['name' => '2026']);
         $application = AdmissionApplication::factory()->rejected()->create([
             'branch_id' => $this->branch->id,
             'desired_class_id' => $this->class->id,
             'application_no' => 'APP-JA-00042',
             'date_of_birth' => '2014-03-09',
+            'birth_reg_no' => '20140309123456789',
+            'name_bn' => 'রহিম উদ্দিন',
+            'name_en' => 'Rahim Uddin',
+            'religion' => 'Islam',
+            'nationality' => 'Bangladeshi',
             'rejection_reason' => 'Incomplete documents.',
         ]);
+        $application->addMedia(UploadedFile::fake()->image('photo.jpg'))->toMediaCollection('photo');
 
         $this->getJson('/api/v1/public/admissions/APP-JA-00042/status?date_of_birth=2014-03-09')
             ->assertOk()
             ->assertJson([
                 'data' => [
                     'application_no' => 'APP-JA-00042',
+                    'branch' => [
+                        'id' => $this->branch->id,
+                        'name' => $this->branch->name,
+                        'code' => $this->branch->code,
+                    ],
+                    'class' => [
+                        'id' => $this->class->id,
+                        'name' => $this->class->name,
+                    ],
+                    'session' => [
+                        'id' => $session->id,
+                        'name' => '2026',
+                        'is_current' => true,
+                    ],
                     'status' => 'rejected',
+                    'name_bn' => 'রহিম উদ্দিন',
+                    'name_en' => 'Rahim Uddin',
+                    'date_of_birth' => '2014-03-09',
+                    'birth_reg_no' => '20140309123456789',
+                    'religion' => 'Islam',
+                    'nationality' => 'Bangladeshi',
                     'rejection_reason' => 'Incomplete documents.',
                 ],
-            ]);
+            ])
+            ->assertJsonPath('data.photo', fn (?string $url): bool => $url !== null && str_contains($url, 'photo.jpg'));
     }
 
     public function test_status_check_with_mismatched_dob_is_404(): void
