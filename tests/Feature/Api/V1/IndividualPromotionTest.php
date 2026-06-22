@@ -194,6 +194,19 @@ class IndividualPromotionTest extends TestCase
             ->assertJsonValidationErrors(['roll_no']);
     }
 
+    public function test_roll_number_above_storage_limit_is_422(): void
+    {
+        $source = $this->enroll(1);
+        $this->annualResult($source, passed: true, publishedAt: now());
+
+        $this->promote($this->tokenWith(['promotion.execute']), $source, ['roll_no' => 405060])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['roll_no']);
+
+        $this->assertSame(EnrollmentStatus::Active, $source->fresh()->status);
+        $this->assertSame(0, Promotion::count());
+    }
+
     public function test_already_enrolled_in_target_session_is_409(): void
     {
         $source = $this->enroll(1);

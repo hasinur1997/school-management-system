@@ -37,7 +37,7 @@ class IndividualPromotionRequest extends FormRequest
             'to_session_id' => ['required', 'integer', 'exists:academic_sessions,id'],
             'to_class_id' => ['required', 'integer'],
             'to_section_id' => ['required', 'integer'],
-            'roll_no' => ['required', 'integer', 'min:1'],
+            'roll_no' => ['required', 'integer', 'min:1', 'max:65535'],
         ];
     }
 

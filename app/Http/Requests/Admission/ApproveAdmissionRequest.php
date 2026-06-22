@@ -34,7 +34,7 @@ class ApproveAdmissionRequest extends FormRequest
             'class_id' => ['required', 'integer'],
             'section_id' => ['required', 'integer'],
             'roll_no' => [
-                'required', 'integer', 'min:1',
+                'required', 'integer', 'min:1', 'max:65535',
                 Rule::unique('enrollments', 'roll_no')->where(fn ($query) => $query
                     ->where('session_id', $this->integer('session_id'))
                     ->where('class_id', $this->integer('class_id'))

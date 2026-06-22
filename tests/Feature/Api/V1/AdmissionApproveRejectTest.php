@@ -229,6 +229,21 @@ class AdmissionApproveRejectTest extends TestCase
             ->assertJsonValidationErrors('roll_no');
     }
 
+    public function test_roll_number_above_storage_limit_is_rejected(): void
+    {
+        $application = $this->makeApplication();
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->postJson("/api/v1/admissions/{$application->id}/approve", $this->approvePayload([
+                'roll_no' => 405060,
+            ]))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('roll_no');
+
+        $this->assertDatabaseCount('students', 0);
+        $this->assertDatabaseCount('enrollments', 0);
+    }
+
     public function test_duplicate_admission_no_is_rejected(): void
     {
         $first = $this->makeApplication();
