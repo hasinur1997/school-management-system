@@ -48,4 +48,16 @@ class UserController extends ApiController
 
         return $this->success(UserAccountResource::make($user), 'Roles updated');
     }
+
+    /**
+     * Show one user account with its roles, for the profile view linked from
+     * "recorded by" on the attendance roster. Unknown id → 404 via binding.
+     */
+    public function show(User $user): JsonResponse
+    {
+        return $this->success(
+            UserAccountResource::make($user->load('roles')),
+            'OK',
+        );
+    }
 }

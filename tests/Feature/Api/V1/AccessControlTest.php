@@ -56,6 +56,32 @@ class AccessControlTest extends TestCase
         }
     }
 
+    public function test_show_user_returns_account_for_super_admin(): void
+    {
+        $user = User::factory()->create([
+            'branch_id' => $this->branch->id,
+            'name' => 'Rakib Hasan',
+        ])->assignRole('admin');
+
+        $this->withToken($this->token)
+            ->getJson("/api/v1/users/{$user->getRouteKey()}")
+            ->assertOk()
+            ->assertJsonPath('data.id', $user->getRouteKey())
+            ->assertJsonPath('data.name', 'Rakib Hasan')
+            ->assertJsonPath('data.roles', ['admin']);
+    }
+
+    public function test_show_user_is_forbidden_for_non_super_admin(): void
+    {
+        $admin = User::factory()->create(['branch_id' => $this->branch->id])->assignRole('admin');
+        $adminToken = $admin->createToken('web')->plainTextToken;
+        $target = User::factory()->create(['branch_id' => $this->branch->id]);
+
+        $this->withToken($adminToken)
+            ->getJson("/api/v1/users/{$target->getRouteKey()}")
+            ->assertForbidden();
+    }
+
     public function test_super_admin_reaches_every_endpoint(): void
     {
         $teacherRoleId = Role::findByName('teacher')->id;

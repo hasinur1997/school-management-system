@@ -32,15 +32,22 @@ class AttendanceSheetResource extends JsonResource
 
                 return [
                     'enrollment_id' => $enrollment->public_id,
+                    // The student's public id, so the roster row can link to the
+                    // student detail page.
+                    'student_id' => $student->public_id,
                     'roll_no' => $enrollment->roll_no,
                     'name_en' => $student->name_en,
                     'photo_url' => $student->photoUrl(),
                     'status' => $record?->status->value,
-                    // When the mark was last recorded and by whom; both null
-                    // until attendance is taken. Drive the "recorded at" /
-                    // "recorded by" columns shown per roster row.
+                    // When the mark was last recorded and by whom; all null until
+                    // attendance is taken. Drive the "recorded at" / "recorded
+                    // by" columns. The recorder ids let the row link to the
+                    // teacher profile (when the recorder is a teacher) or the
+                    // user profile otherwise.
                     'recorded_at' => $record?->updated_at?->toIso8601String(),
                     'recorded_by' => $record?->recorder?->name,
+                    'recorded_by_teacher_id' => $record?->recorder?->teacher?->public_id,
+                    'recorded_by_user_id' => $record?->recorder?->public_id,
                 ];
             })->all(),
         ];
