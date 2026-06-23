@@ -85,20 +85,18 @@ class AdmissionService
 
     /**
      * List admission applications in the caller's branch (branch isolation is
-     * automatic via BranchScope). Defaults to pending; supports filtering by
-     * desired class and a created-date range, plus a free-text search across
-     * the applicant/father identifiers. The desired class is eager loaded for
-     * the compact rows so it never lazy loads in the Resource.
+     * automatic via BranchScope). Supports filtering by status, desired class,
+     * and a created-date range, plus a free-text search across the
+     * applicant/father identifiers. The desired class is eager loaded for the
+     * compact rows so it never lazy loads in the Resource.
      *
      * @param  array<string, mixed>  $filters
      */
     public function list(array $filters, int $perPage): LengthAwarePaginator
     {
-        $status = $filters['status'] ?? AdmissionStatus::Pending->value;
-
         return AdmissionApplication::query()
             ->with('desiredClass')
-            ->where('status', $status)
+            ->when(isset($filters['status']), fn (Builder $query) => $query->where('status', $filters['status']))
             ->when(isset($filters['desired_class_id']), fn (Builder $query) => $query->where('desired_class_id', $filters['desired_class_id']))
             ->when(isset($filters['from']), fn (Builder $query) => $query->whereDate('created_at', '>=', $filters['from']))
             ->when(isset($filters['to']), fn (Builder $query) => $query->whereDate('created_at', '<=', $filters['to']))

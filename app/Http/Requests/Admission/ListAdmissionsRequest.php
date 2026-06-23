@@ -8,9 +8,8 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
 
 /**
- * Validates the admission review index filters: status (defaults to pending in
- * the service), desired class, a created-date range, free-text search, and
- * pagination.
+ * Validates the admission review index filters: optional status, desired
+ * class, a created-date range, free-text search, and pagination.
  */
 class ListAdmissionsRequest extends FormRequest
 {

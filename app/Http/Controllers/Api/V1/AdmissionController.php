@@ -22,7 +22,7 @@ class AdmissionController extends ApiController
     public function __construct(private readonly AdmissionService $admissions) {}
 
     /**
-     * Display a paginated, filterable listing of applications (default pending).
+     * Display a paginated, filterable listing of applications.
      */
     public function index(ListAdmissionsRequest $request): JsonResponse
     {

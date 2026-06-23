@@ -59,18 +59,22 @@ class AdmissionReviewTest extends TestCase
         ], $overrides));
     }
 
-    public function test_index_defaults_to_pending(): void
+    public function test_index_lists_all_statuses_when_status_is_omitted(): void
     {
         $this->makeApplication(['status' => AdmissionStatus::Pending]);
         $this->makeApplication(['status' => AdmissionStatus::Approved]);
         $this->makeApplication(['status' => AdmissionStatus::Rejected]);
 
-        $this->withToken($this->tokenForRole('admin'))
+        $response = $this->withToken($this->tokenForRole('admin'))
             ->getJson('/api/v1/admissions')
             ->assertOk()
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.status', 'pending')
-            ->assertJsonPath('meta.total', 1);
+            ->assertJsonCount(3, 'data')
+            ->assertJsonPath('meta.total', 3);
+
+        $this->assertEqualsCanonicalizing(
+            ['pending', 'approved', 'rejected'],
+            array_column($response->json('data'), 'status'),
+        );
     }
 
     public function test_index_filters_and_search(): void
@@ -97,7 +101,7 @@ class AdmissionReviewTest extends TestCase
 
         // desired_class_id filter
         $this->withToken($token)->getJson("/api/v1/admissions?desired_class_id={$this->class->id}")
-            ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.name_en', 'Karim Hossain');
+            ->assertOk()->assertJsonCount(2, 'data')->assertJsonPath('meta.total', 2);
 
         // date range filter
         $this->withToken($token)->getJson('/api/v1/admissions?from=2026-06-05&to=2026-06-15')
