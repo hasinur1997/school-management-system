@@ -28,13 +28,19 @@ class AttendanceSheetResource extends JsonResource
             'section' => $this->resource['section']->name,
             'students' => $this->resource['enrollments']->map(function (Enrollment $enrollment) use ($records): array {
                 $student = $enrollment->student;
+                $record = $records->get($enrollment->id);
 
                 return [
                     'enrollment_id' => $enrollment->public_id,
                     'roll_no' => $enrollment->roll_no,
                     'name_en' => $student->name_en,
                     'photo_url' => $student->photoUrl(),
-                    'status' => $records->get($enrollment->id)?->status->value,
+                    'status' => $record?->status->value,
+                    // When the mark was last recorded and by whom; both null
+                    // until attendance is taken. Drive the "recorded at" /
+                    // "recorded by" columns shown per roster row.
+                    'recorded_at' => $record?->updated_at?->toIso8601String(),
+                    'recorded_by' => $record?->recorder?->name,
                 ];
             })->all(),
         ];

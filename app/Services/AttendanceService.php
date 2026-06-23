@@ -41,6 +41,7 @@ class AttendanceService
             ->get();
 
         $records = StudentAttendance::query()
+            ->with('recorder:id,name')
             ->whereIn('enrollment_id', $enrollments->modelKeys())
             ->whereDate('date', $date->toDateString())
             ->get()
