@@ -104,6 +104,20 @@ class StudentService
     }
 
     /**
+     * Update a single enrollment row and return it with its session/class/
+     * section eager loaded (so the resource never lazy loads). Branch isolation
+     * and ownership are enforced by the caller (the controller).
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function updateEnrollment(Enrollment $enrollment, array $data): Enrollment
+    {
+        $enrollment->update($data);
+
+        return $enrollment->load(['session', 'schoolClass', 'section']);
+    }
+
+    /**
      * Flip a student's status between active and inactive. The `tc` status is
      * blocked at validation (owned by the TC module).
      */

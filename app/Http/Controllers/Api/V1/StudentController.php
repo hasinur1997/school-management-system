@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\StudentStatus;
 use App\Http\Controllers\Api\ApiController;
 use App\Http\Requests\Student\ListStudentsRequest;
+use App\Http\Requests\Student\UpdateEnrollmentRequest;
 use App\Http\Requests\Student\UpdateStudentRequest;
 use App\Http\Requests\Student\UpdateStudentStatusRequest;
 use App\Http\Requests\Student\UploadStudentPhotoRequest;
 use App\Http\Resources\EnrollmentResource;
 use App\Http\Resources\StudentListResource;
 use App\Http\Resources\StudentResource;
+use App\Models\Enrollment;
 use App\Models\Student;
 use App\Services\StudentService;
 use Illuminate\Http\JsonResponse;
@@ -83,6 +85,28 @@ class StudentController extends ApiController
         $student = $this->students->update($student, $request->validated());
 
         return $this->success(StudentResource::make($student), 'Student updated');
+    }
+
+    /**
+     * Update a single enrollment row in a student's class history.
+     *
+     * The {student} binding is branch-scoped (out-of-branch → 404). {enrollment}
+     * is not branch-scoped (it derives its branch through the student), so we
+     * confirm it belongs to this student and 404 otherwise — never editing or
+     * leaking another student's enrollment.
+     */
+    public function updateEnrollment(
+        UpdateEnrollmentRequest $request,
+        Student $student,
+        Enrollment $enrollment
+    ): JsonResponse {
+        if ($enrollment->student_id !== $student->id) {
+            abort(404);
+        }
+
+        $enrollment = $this->students->updateEnrollment($enrollment, $request->validated());
+
+        return $this->success(EnrollmentResource::make($enrollment), 'Enrollment updated');
     }
 
     /**

@@ -267,6 +267,167 @@ class StudentEndpointsTest extends TestCase
             ->assertStatus(404);
     }
 
+    public function test_update_can_change_birth_reg_no(): void
+    {
+        $student = $this->makeStudent(['birth_reg_no' => '1990111111111111111']);
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->putJson("/api/v1/students/{$student->public_id}", $this->validUpdatePayload([
+                'birth_reg_no' => '2020999999999999999',
+            ]))
+            ->assertOk()
+            ->assertJsonPath('data.birth_reg_no', '2020999999999999999');
+
+        $this->assertDatabaseHas('students', [
+            'id' => $student->id,
+            'birth_reg_no' => '2020999999999999999',
+        ]);
+    }
+
+    public function test_update_birth_reg_no_must_be_unique(): void
+    {
+        $taken = $this->makeStudent(['birth_reg_no' => '1111111111111111111']);
+        $student = $this->makeStudent(['birth_reg_no' => '2222222222222222222']);
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->putJson("/api/v1/students/{$student->public_id}", $this->validUpdatePayload([
+                'birth_reg_no' => $taken->birth_reg_no,
+            ]))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['birth_reg_no']);
+    }
+
+    public function test_update_enrollment_happy_path(): void
+    {
+        $class7 = SchoolClass::factory()->create(['branch_id' => $this->branch->id]);
+        $sectionA = Section::factory()->create(['class_id' => $class7->id]);
+        $class8 = SchoolClass::factory()->create(['branch_id' => $this->branch->id]);
+        $sectionB = Section::factory()->create(['class_id' => $class8->id]);
+
+        $student = $this->makeStudent();
+        $enrollment = Enrollment::factory()->create([
+            'student_id' => $student->id,
+            'session_id' => $this->session->id,
+            'class_id' => $class7->id,
+            'section_id' => $sectionA->id,
+            'roll_no' => 5,
+            'status' => 'active',
+        ]);
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->putJson("/api/v1/students/{$student->public_id}/enrollments/{$enrollment->public_id}", [
+                'session_id' => $this->session->public_id,
+                'class_id' => $class8->public_id,
+                'section_id' => $sectionB->public_id,
+                'roll_no' => 9,
+                'status' => 'promoted',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.roll_no', 9)
+            ->assertJsonPath('data.class_id', $class8->public_id)
+            ->assertJsonPath('data.status', 'promoted');
+
+        $this->assertDatabaseHas('enrollments', [
+            'id' => $enrollment->id,
+            'class_id' => $class8->id,
+            'section_id' => $sectionB->id,
+            'roll_no' => 9,
+            'status' => 'promoted',
+        ]);
+    }
+
+    public function test_update_enrollment_rejects_section_outside_class(): void
+    {
+        $class7 = SchoolClass::factory()->create(['branch_id' => $this->branch->id]);
+        $sectionA = Section::factory()->create(['class_id' => $class7->id]);
+        $class8 = SchoolClass::factory()->create(['branch_id' => $this->branch->id]);
+        $foreignSection = Section::factory()->create(['class_id' => $class8->id]);
+
+        $student = $this->makeStudent();
+        $enrollment = Enrollment::factory()->create([
+            'student_id' => $student->id,
+            'session_id' => $this->session->id,
+            'class_id' => $class7->id,
+            'section_id' => $sectionA->id,
+            'roll_no' => 5,
+        ]);
+
+        // class_id = class7 but section belongs to class8 → 422 on section_id.
+        $this->withToken($this->tokenForRole('admin'))
+            ->putJson("/api/v1/students/{$student->public_id}/enrollments/{$enrollment->public_id}", [
+                'session_id' => $this->session->public_id,
+                'class_id' => $class7->public_id,
+                'section_id' => $foreignSection->public_id,
+                'roll_no' => 5,
+                'status' => 'active',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['section_id']);
+    }
+
+    public function test_update_enrollment_rejects_duplicate_roll(): void
+    {
+        $class = SchoolClass::factory()->create(['branch_id' => $this->branch->id]);
+        $section = Section::factory()->create(['class_id' => $class->id]);
+
+        $studentA = $this->makeStudent();
+        $enrollmentA = Enrollment::factory()->create([
+            'student_id' => $studentA->id,
+            'session_id' => $this->session->id,
+            'class_id' => $class->id,
+            'section_id' => $section->id,
+            'roll_no' => 5,
+        ]);
+
+        // Another student already holds roll 7 in the same section/session.
+        $studentB = $this->makeStudent();
+        Enrollment::factory()->create([
+            'student_id' => $studentB->id,
+            'session_id' => $this->session->id,
+            'class_id' => $class->id,
+            'section_id' => $section->id,
+            'roll_no' => 7,
+        ]);
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->putJson("/api/v1/students/{$studentA->public_id}/enrollments/{$enrollmentA->public_id}", [
+                'session_id' => $this->session->public_id,
+                'class_id' => $class->public_id,
+                'section_id' => $section->public_id,
+                'roll_no' => 7,
+                'status' => 'active',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['roll_no']);
+    }
+
+    public function test_update_enrollment_of_another_student_returns_404(): void
+    {
+        $class = SchoolClass::factory()->create(['branch_id' => $this->branch->id]);
+        $section = Section::factory()->create(['class_id' => $class->id]);
+
+        $studentA = $this->makeStudent();
+        $studentB = $this->makeStudent();
+        $enrollmentB = Enrollment::factory()->create([
+            'student_id' => $studentB->id,
+            'session_id' => $this->session->id,
+            'class_id' => $class->id,
+            'section_id' => $section->id,
+            'roll_no' => 5,
+        ]);
+
+        // enrollmentB belongs to studentB, addressed under studentA → 404.
+        $this->withToken($this->tokenForRole('admin'))
+            ->putJson("/api/v1/students/{$studentA->public_id}/enrollments/{$enrollmentB->public_id}", [
+                'session_id' => $this->session->public_id,
+                'class_id' => $class->public_id,
+                'section_id' => $section->public_id,
+                'roll_no' => 6,
+                'status' => 'active',
+            ])
+            ->assertStatus(404);
+    }
+
     /**
      * A full, valid PUT payload; merge overrides on top.
      *

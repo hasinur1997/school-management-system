@@ -4,11 +4,14 @@ namespace App\Http\Requests\Student;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 /**
- * Validates a student profile update. admission_no and birth_reg_no are
- * immutable identity columns — any attempt to change them is rejected
- * explicitly (422). status moves through PATCH /status, not here.
+ * Validates a student profile update. admission_no is an immutable identity
+ * column — any attempt to change it is rejected explicitly (422). birth_reg_no
+ * is editable but stays unique across students (the current student is ignored);
+ * it's `sometimes` so a payload that omits it leaves it unchanged. status moves
+ * through PATCH /status, not here.
  */
 class UpdateStudentRequest extends FormRequest
 {
@@ -54,9 +57,14 @@ class UpdateStudentRequest extends FormRequest
             'nationality' => ['required', 'string', 'max:50'],
             'caste' => ['nullable', 'string', 'max:50'],
 
-            // Immutable identity columns.
+            // Editable but unique across students (ignore the current record).
+            'birth_reg_no' => [
+                'sometimes', 'required', 'string', 'max:25',
+                Rule::unique('students', 'birth_reg_no')->ignore($this->route('student')),
+            ],
+
+            // Immutable identity column.
             'admission_no' => ['prohibited'],
-            'birth_reg_no' => ['prohibited'],
         ];
     }
 }

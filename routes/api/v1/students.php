@@ -18,6 +18,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('students/{student}/enrollments', [StudentController::class, 'enrollments'])
         ->name('students.enrollments');
 
+    // Edit one enrollment row (class history). student.update gates it; the
+    // controller confirms the enrollment belongs to the in-branch student.
+    Route::put('students/{student}/enrollments/{enrollment}', [StudentController::class, 'updateEnrollment'])
+        ->middleware('permission:student.update')
+        ->name('students.enrollments.update');
+
     Route::put('students/{student}', [StudentController::class, 'update'])
         ->middleware('permission:student.update')
         ->name('students.update');
