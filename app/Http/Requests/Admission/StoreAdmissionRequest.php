@@ -91,7 +91,7 @@ class StoreAdmissionRequest extends FormRequest
             'previous_educations.*.exam_name' => ['required', 'string', 'max:100'],
             'previous_educations.*.institution_name' => ['required', 'string', 'max:150'],
             'previous_educations.*.gpa' => ['nullable', 'numeric', 'min:0', 'max:5'],
-            'previous_educations.*.passing_year' => ['nullable', 'integer', 'digits:4'],
+            'previous_educations.*.passing_year' => ['nullable', 'integer', 'digits:4', 'min:1901', 'max:'.now()->year],
             'previous_educations.*.board_roll' => ['nullable', 'string', 'max:30'],
             'previous_educations.*.board_reg_no' => ['nullable', 'string', 'max:30'],
         ];

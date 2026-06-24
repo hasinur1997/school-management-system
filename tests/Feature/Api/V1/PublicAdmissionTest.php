@@ -121,6 +121,24 @@ class PublicAdmissionTest extends TestCase
             ->assertJsonValidationErrors(['name_bn', 'name_en', 'father_name_bn', 'birth_reg_no', 'photo', 'branch_id', 'desired_class_id']);
     }
 
+    public function test_previous_education_passing_year_must_be_realistic(): void
+    {
+        $this->postJson('/api/v1/public/admissions', $this->payload([
+            'previous_educations' => [
+                [
+                    'exam_name' => 'PSC',
+                    'institution_name' => 'Jogonnathpur Govt. Pria',
+                    'gpa' => '0',
+                    'passing_year' => '2409',
+                    'board_roll' => '343434343434343434343434343434',
+                    'board_reg_no' => '2342342342342342343423432',
+                ],
+            ],
+        ]))->assertStatus(422)->assertJsonValidationErrors(['previous_educations.0.passing_year']);
+
+        $this->assertSame(0, AdmissionPreviousEducation::count());
+    }
+
     public function test_photo_must_be_image_within_size_limit(): void
     {
         $this->postJson('/api/v1/public/admissions', $this->payload([

@@ -61,6 +61,7 @@ class StudentService
             'media',
             'user',
             'application',
+            'branch',
             'enrollments' => fn ($query) => $query
                 ->latest('id')
                 ->with(['session', 'schoolClass', 'section']),
@@ -95,6 +96,7 @@ class StudentService
             'media',
             'user',
             'application',
+            'branch',
             'enrollments' => fn ($query) => $query
                 ->latest('id')
                 ->with(['session', 'schoolClass', 'section']),

@@ -29,6 +29,11 @@ class StudentResource extends JsonResource
             'application_id' => $this->whenLoaded('application', fn () => $this->application?->public_id),
             'admission_no' => $this->admission_no,
 
+            'branch' => $this->whenLoaded('branch', fn () => $this->branch === null ? null : [
+                'id' => $this->branch->public_id,
+                'name' => $this->branch->name,
+            ]),
+
             'name_bn' => $this->name_bn,
             'name_en' => $this->name_en,
 
