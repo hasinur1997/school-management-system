@@ -10,6 +10,11 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middleware('permission:student.view')
         ->name('students.index');
 
+    // Direct student creation (office path) — distinct from admission approval.
+    Route::post('students', [StudentController::class, 'store'])
+        ->middleware('permission:student.create')
+        ->name('students.store');
+
     // show authorizes via StudentPolicy::view — staff or the student itself.
     Route::get('students/{student}', [StudentController::class, 'show'])
         ->name('students.show');

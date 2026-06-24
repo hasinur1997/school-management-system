@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Enums\StudentStatus;
+use App\Jobs\SendCredentials;
 use App\Models\AcademicSession;
 use App\Models\Branch;
 use App\Models\Enrollment;
@@ -15,6 +16,7 @@ use Database\Seeders\RoleSeeder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -426,6 +428,134 @@ class StudentEndpointsTest extends TestCase
                 'status' => 'active',
             ])
             ->assertStatus(404);
+    }
+
+    public function test_store_creates_student_login_and_active_enrollment(): void
+    {
+        Queue::fake();
+
+        $class = SchoolClass::factory()->create(['branch_id' => $this->branch->id]);
+        $section = Section::factory()->create(['class_id' => $class->id]);
+
+        $response = $this->withToken($this->tokenForRole('admin'))
+            ->postJson('/api/v1/students', $this->validStorePayload([
+                'class_id' => $class->public_id,
+                'section_id' => $section->public_id,
+                'roll_no' => 7,
+            ]))
+            ->assertStatus(201)
+            ->assertJsonPath('data.name_en', 'Rahim Uddin')
+            ->assertJsonPath('data.status', 'active');
+
+        // Admission number was auto-generated and the profile is in our branch.
+        $this->assertNotNull($response->json('data.admission_no'));
+
+        $student = Student::firstWhere('name_en', 'Rahim Uddin');
+        $this->assertSame($this->branch->id, $student->branch_id);
+        $this->assertNotNull($student->user_id);
+
+        $this->assertDatabaseHas('enrollments', [
+            'student_id' => $student->id,
+            'session_id' => $this->session->id,
+            'class_id' => $class->id,
+            'section_id' => $section->id,
+            'roll_no' => 7,
+            'status' => 'active',
+        ]);
+
+        $this->assertDatabaseHas('model_has_roles', ['model_id' => $student->user_id]);
+        Queue::assertPushed(SendCredentials::class, fn ($job) => $job->role === 'Student');
+    }
+
+    public function test_store_with_parent_creates_link_and_parent_credentials(): void
+    {
+        Queue::fake();
+
+        $class = SchoolClass::factory()->create(['branch_id' => $this->branch->id]);
+        $section = Section::factory()->create(['class_id' => $class->id]);
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->postJson('/api/v1/students', $this->validStorePayload([
+                'class_id' => $class->public_id,
+                'section_id' => $section->public_id,
+                'roll_no' => 7,
+                'create_parent_account' => true,
+                'parent_relation' => 'father',
+            ]))
+            ->assertStatus(201);
+
+        $student = Student::firstWhere('name_en', 'Rahim Uddin');
+        $this->assertDatabaseHas('parent_student', ['student_id' => $student->id]);
+        Queue::assertPushed(SendCredentials::class, fn ($job) => $job->role === 'Parent');
+    }
+
+    public function test_store_rejects_duplicate_roll_in_same_class_section(): void
+    {
+        $class = SchoolClass::factory()->create(['branch_id' => $this->branch->id]);
+        $section = Section::factory()->create(['class_id' => $class->id]);
+        Enrollment::factory()->create([
+            'student_id' => $this->makeStudent()->id,
+            'session_id' => $this->session->id,
+            'class_id' => $class->id,
+            'section_id' => $section->id,
+            'roll_no' => 7,
+        ]);
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->postJson('/api/v1/students', $this->validStorePayload([
+                'class_id' => $class->public_id,
+                'section_id' => $section->public_id,
+                'roll_no' => 7,
+            ]))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['roll_no']);
+    }
+
+    public function test_store_rejects_section_outside_class(): void
+    {
+        $class = SchoolClass::factory()->create(['branch_id' => $this->branch->id]);
+        $otherClass = SchoolClass::factory()->create(['branch_id' => $this->branch->id]);
+        $foreignSection = Section::factory()->create(['class_id' => $otherClass->id]);
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->postJson('/api/v1/students', $this->validStorePayload([
+                'class_id' => $class->public_id,
+                'section_id' => $foreignSection->public_id,
+                'roll_no' => 7,
+            ]))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['section_id']);
+    }
+
+    public function test_store_forbidden_without_create_permission(): void
+    {
+        $class = SchoolClass::factory()->create(['branch_id' => $this->branch->id]);
+        $section = Section::factory()->create(['class_id' => $class->id]);
+
+        // teacher holds student.view but not student.create.
+        $this->withToken($this->tokenForRole('teacher'))
+            ->postJson('/api/v1/students', $this->validStorePayload([
+                'class_id' => $class->public_id,
+                'section_id' => $section->public_id,
+                'roll_no' => 7,
+            ]))
+            ->assertStatus(403);
+    }
+
+    /**
+     * A full, valid POST /students payload; merge overrides on top. The caller
+     * supplies the academic ids (public ids) and roll for the enrollment.
+     *
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function validStorePayload(array $overrides = []): array
+    {
+        return array_merge($this->validUpdatePayload([
+            'birth_reg_no' => '1990111111111111111',
+            'session_id' => $this->session->public_id,
+            'create_parent_account' => false,
+        ]), $overrides);
     }
 
     /**

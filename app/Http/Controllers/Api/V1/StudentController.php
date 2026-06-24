@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\StudentStatus;
 use App\Http\Controllers\Api\ApiController;
 use App\Http\Requests\Student\ListStudentsRequest;
+use App\Http\Requests\Student\StoreStudentRequest;
 use App\Http\Requests\Student\UpdateEnrollmentRequest;
 use App\Http\Requests\Student\UpdateStudentRequest;
 use App\Http\Requests\Student\UpdateStudentStatusRequest;
@@ -43,6 +44,21 @@ class StudentController extends ApiController
                 'last_page' => $students->lastPage(),
             ],
         ]);
+    }
+
+    /**
+     * Create a student directly (login + profile + active enrollment + optional
+     * linked parent), bypassing the admission application flow.
+     */
+    public function store(StoreStudentRequest $request): JsonResponse
+    {
+        $student = $this->students->create($request->validated(), $request->targetBranchId());
+
+        return $this->success(
+            StudentResource::make($student),
+            'Student created. Credentials are being sent.',
+            201,
+        );
     }
 
     /**
