@@ -144,4 +144,14 @@ class StudentController extends ApiController
 
         return $this->success(StudentResource::make($student), 'Student photo updated');
     }
+
+    /**
+     * Regenerate the student's password, revoke tokens, and queue new credentials.
+     */
+    public function resendCredentials(Student $student): JsonResponse
+    {
+        $this->students->resendCredentials($student);
+
+        return $this->success(null, 'New credentials are being sent to the student.');
+    }
 }

@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth:sanctum', 'permission:parent.manage'])->group(function () {
     Route::get('parents', [ParentController::class, 'index'])->name('parents.index');
     Route::post('parents', [ParentController::class, 'store'])->name('parents.store');
+    Route::post('parents/{parent}/resend-credentials', [ParentController::class, 'resendCredentials'])->name('parents.resend-credentials');
     Route::post('parents/{parent}/students', [ParentController::class, 'linkStudent'])->name('parents.students.link');
     Route::delete('parents/{parent}/students/{student}', [ParentController::class, 'unlinkStudent'])->name('parents.students.unlink');
 });

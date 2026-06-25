@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Jobs\SendCredentials;
+use App\Mail\CredentialsMail;
 use App\Models\AcademicSession;
 use App\Models\Branch;
 use App\Models\Enrollment;
@@ -14,6 +15,7 @@ use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -232,6 +234,52 @@ class ParentEndpointsTest extends TestCase
     {
         $this->withToken($this->tokenForRole('admin'))
             ->getJson('/api/v1/me/students')
+            ->assertStatus(403);
+    }
+
+    public function test_resend_credentials_queues_mail_for_parent(): void
+    {
+        Mail::fake();
+        $parent = $this->makeParent();
+        $parent->user->forceFill(['email' => 'guardian@example.test', 'phone' => '01822222222'])->save();
+        $oldHash = $parent->user->password;
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->postJson("/api/v1/parents/{$parent->public_id}/resend-credentials")
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('message', 'New credentials are being sent to the parent.')
+            ->assertJsonPath('data', null);
+
+        $this->assertNotSame($oldHash, $parent->user->fresh()->password);
+
+        Mail::assertSent(CredentialsMail::class, function (CredentialsMail $mail): bool {
+            return $mail->hasTo('guardian@example.test')
+                && $mail->role === 'Parent'
+                && $mail->email === 'guardian@example.test'
+                && $mail->phone === '01822222222';
+        });
+    }
+
+    public function test_resend_credentials_422_when_parent_has_no_email(): void
+    {
+        Mail::fake();
+        $parent = $this->makeParent();
+        $parent->user->forceFill(['email' => null])->save();
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->postJson("/api/v1/parents/{$parent->public_id}/resend-credentials")
+            ->assertStatus(422);
+
+        Mail::assertNothingSent();
+    }
+
+    public function test_resend_credentials_requires_parent_manage_permission(): void
+    {
+        $parent = $this->makeParent();
+
+        $this->withToken($this->tokenForRole('teacher'))
+            ->postJson("/api/v1/parents/{$parent->public_id}/resend-credentials")
             ->assertStatus(403);
     }
 

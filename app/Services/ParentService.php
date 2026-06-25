@@ -90,6 +90,29 @@ class ParentService
     }
 
     /**
+     * Regenerate the parent's password, revoke existing tokens, and queue fresh
+     * login credentials. Credentials are delivered by email, so a parent without
+     * an email on file has no delivery channel (422).
+     */
+    public function resendCredentials(ParentProfile $parent): void
+    {
+        $user = $parent->user;
+
+        if ($user === null || $user->email === null) {
+            abort(422, 'This parent has no email address on file; credentials cannot be sent.');
+        }
+
+        DB::transaction(function () use ($user): void {
+            $password = Str::password(10);
+
+            $user->forceFill(['password' => Hash::make($password)])->save();
+            $user->tokens()->delete();
+
+            SendCredentials::dispatch($user, $password, 'Parent')->afterCommit();
+        });
+    }
+
+    /**
      * Link a student to a parent. A duplicate link is a 409 conflict; the
      * student's branch validity is enforced at the request layer.
      */

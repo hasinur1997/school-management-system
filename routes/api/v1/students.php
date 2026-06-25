@@ -41,6 +41,10 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middleware('permission:student.update')
         ->name('students.photo');
 
+    Route::post('students/{student}/resend-credentials', [StudentController::class, 'resendCredentials'])
+        ->middleware('permission:student.create')
+        ->name('students.resend-credentials');
+
     // Single ID card PDF (12.1): streamed on demand from live enrollment
     // data — no table. Out-of-branch {student} ids 404 via BranchScope.
     Route::get('students/{student}/id-card', [IdCardController::class, 'show'])

@@ -78,7 +78,8 @@ class TeacherCredentialsTest extends TestCase
         // Queue is sync in tests, so the job runs and the mailable is sent.
         Mail::assertSent(CredentialsMail::class, function (CredentialsMail $mail): bool {
             return $mail->hasTo('rahim@school.com')
-                && $mail->identifier === 'rahim@school.com'
+                && $mail->email === 'rahim@school.com'
+                && $mail->phone === '01712345678'
                 && $mail->role === 'Teacher'
                 && $mail->password !== '';
         });

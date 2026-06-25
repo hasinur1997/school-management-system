@@ -76,6 +76,16 @@ class ParentController extends ApiController
     }
 
     /**
+     * Regenerate the parent's password, revoke tokens, and queue new credentials.
+     */
+    public function resendCredentials(ParentProfile $parent): JsonResponse
+    {
+        $this->parents->resendCredentials($parent);
+
+        return $this->success(null, 'New credentials are being sent to the parent.');
+    }
+
+    /**
      * The authenticated parent's linked students (compact shape). Restricted to
      * the parent role — other roles read their children elsewhere or not at all.
      */

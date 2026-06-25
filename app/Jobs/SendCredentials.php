@@ -60,7 +60,8 @@ class SendCredentials implements ShouldQueue
         Mail::to($this->user->email)->send(new CredentialsMail(
             name: $this->user->name,
             role: $this->role,
-            identifier: $this->loginIdentifier(),
+            email: $this->user->email,
+            phone: $this->user->phone,
             password: $this->password,
             loginUrl: rtrim((string) config('app.url'), '/').'/login',
         ));
@@ -77,14 +78,5 @@ class SendCredentials implements ShouldQueue
             'role' => $this->role,
             'error' => $exception->getMessage(),
         ]);
-    }
-
-    private function loginIdentifier(): string
-    {
-        if (strtolower($this->role) !== 'teacher' && $this->user->phone !== null) {
-            return $this->user->phone;
-        }
-
-        return (string) $this->user->email;
     }
 }

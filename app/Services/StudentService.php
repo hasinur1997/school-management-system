@@ -267,4 +267,31 @@ class StudentService
 
         return $this->loadProfile($student);
     }
+
+    /**
+     * Regenerate the student's password, revoke existing tokens, and queue
+     * fresh login credentials. Credentials are delivered by email, so a
+     * student without an email on file has no delivery channel (422).
+     */
+    public function resendCredentials(Student $student): void
+    {
+        if ($student->status !== StudentStatus::Active) {
+            abort(409, 'Student is not active.');
+        }
+
+        $user = $student->user;
+
+        if ($user === null || $user->email === null) {
+            abort(422, 'This student has no email address on file; credentials cannot be sent.');
+        }
+
+        DB::transaction(function () use ($user): void {
+            $password = Str::password(10);
+
+            $user->forceFill(['password' => Hash::make($password)])->save();
+            $user->tokens()->delete();
+
+            SendCredentials::dispatch($user, $password, 'Student')->afterCommit();
+        });
+    }
 }

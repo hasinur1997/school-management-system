@@ -259,6 +259,62 @@ class StudentEndpointsTest extends TestCase
             ->assertJsonValidationErrors(['photo']);
     }
 
+    public function test_resend_credentials_queues_mail_for_active_student(): void
+    {
+        Mail::fake();
+        $student = $this->makeStudent(['status' => StudentStatus::Active]);
+        $student->user->forceFill(['email' => 'pupil@example.test', 'phone' => '01799999999'])->save();
+        $oldHash = $student->user->password;
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->postJson("/api/v1/students/{$student->public_id}/resend-credentials")
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('message', 'New credentials are being sent to the student.')
+            ->assertJsonPath('data', null);
+
+        $this->assertNotSame($oldHash, $student->user->fresh()->password);
+
+        Mail::assertSent(CredentialsMail::class, function (CredentialsMail $mail): bool {
+            return $mail->hasTo('pupil@example.test')
+                && $mail->role === 'Student'
+                && $mail->email === 'pupil@example.test'
+                && $mail->phone === '01799999999';
+        });
+    }
+
+    public function test_resend_credentials_422_when_student_has_no_email(): void
+    {
+        Mail::fake();
+        $student = $this->makeStudent(['status' => StudentStatus::Active]);
+        $student->user->forceFill(['email' => null])->save();
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->postJson("/api/v1/students/{$student->public_id}/resend-credentials")
+            ->assertStatus(422);
+
+        Mail::assertNothingSent();
+    }
+
+    public function test_resend_credentials_409_when_student_inactive(): void
+    {
+        $student = $this->makeStudent(['status' => StudentStatus::Inactive]);
+        $student->user->forceFill(['email' => 'pupil@example.test'])->save();
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->postJson("/api/v1/students/{$student->public_id}/resend-credentials")
+            ->assertStatus(409);
+    }
+
+    public function test_resend_credentials_requires_student_create_permission(): void
+    {
+        $student = $this->makeStudent(['status' => StudentStatus::Active]);
+
+        $this->withToken($this->tokenForRole('teacher'))
+            ->postJson("/api/v1/students/{$student->public_id}/resend-credentials")
+            ->assertStatus(403);
+    }
+
     public function test_cross_branch_student_returns_404(): void
     {
         $other = Branch::factory()->create();
@@ -529,15 +585,19 @@ class StudentEndpointsTest extends TestCase
             ->assertJsonPath('data.student_email', 'student@example.test');
 
         Mail::assertSent(CredentialsMail::class, function (CredentialsMail $mail): bool {
+            // The shared phone belongs to the parent login, so the student's
+            // phone is left null and only the email identifier is carried.
             return $mail->hasTo('student@example.test')
                 && $mail->role === 'Student'
-                && $mail->identifier === 'student@example.test';
+                && $mail->email === 'student@example.test'
+                && $mail->phone === null;
         });
 
         Mail::assertSent(CredentialsMail::class, function (CredentialsMail $mail): bool {
             return $mail->hasTo('parent@example.test')
                 && $mail->role === 'Parent'
-                && $mail->identifier === '01712345678';
+                && $mail->email === 'parent@example.test'
+                && $mail->phone === '01712345678';
         });
     }
 
