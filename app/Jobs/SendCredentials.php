@@ -9,7 +9,10 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Throwable;
 
 /**
  * Emails freshly generated login credentials to a user. Generic by design: it
@@ -41,9 +44,8 @@ class SendCredentials implements ShouldQueue
     /**
      * Execute the job: mail the credentials to the user's email.
      *
-     * Students and parents (Task 3.5) authenticate by phone and carry no email
-     * address; their credentials are delivered out-of-band (SMS, out of scope),
-     * so there is nothing to email and the job is a no-op for them.
+     * Users without an email address receive credentials out-of-band (SMS, out
+     * of scope), so there is nothing to email and the job is a no-op for them.
      */
     public function handle(): void
     {
@@ -51,12 +53,38 @@ class SendCredentials implements ShouldQueue
             return;
         }
 
+        if (! Hash::check($this->password, $this->user->password)) {
+            return;
+        }
+
         Mail::to($this->user->email)->send(new CredentialsMail(
             name: $this->user->name,
             role: $this->role,
-            identifier: $this->user->email,
+            identifier: $this->loginIdentifier(),
             password: $this->password,
             loginUrl: rtrim((string) config('app.url'), '/').'/login',
         ));
+    }
+
+    /**
+     * Log exhausted credential delivery failures with enough context to retry
+     * manually without exposing the plaintext password.
+     */
+    public function failed(Throwable $exception): void
+    {
+        Log::error('Credential email failed', [
+            'user_id' => $this->user->id,
+            'role' => $this->role,
+            'error' => $exception->getMessage(),
+        ]);
+    }
+
+    private function loginIdentifier(): string
+    {
+        if (strtolower($this->role) !== 'teacher' && $this->user->phone !== null) {
+            return $this->user->phone;
+        }
+
+        return (string) $this->user->email;
     }
 }

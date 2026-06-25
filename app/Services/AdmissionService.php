@@ -193,6 +193,7 @@ class AdmissionService
                 'present_village', 'present_post_office', 'present_upazila', 'present_district', 'present_division',
                 'permanent_village', 'permanent_post_office', 'permanent_upazila', 'permanent_district', 'permanent_division',
                 'father_mobile', 'mother_mobile',
+                'father_email', 'mother_email',
                 'birth_reg_no', 'date_of_birth', 'religion', 'nationality', 'caste',
             ]));
             $student->user_id = $studentUser->id;

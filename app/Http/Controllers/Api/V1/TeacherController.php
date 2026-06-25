@@ -67,7 +67,7 @@ class TeacherController extends ApiController
     }
 
     /**
-     * Update a teacher's mutable profile fields (email is immutable).
+     * Update a teacher's mutable profile fields and linked login email.
      */
     public function update(UpdateTeacherRequest $request, Teacher $teacher): JsonResponse
     {

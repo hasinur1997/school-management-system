@@ -36,6 +36,7 @@ class StudentResource extends JsonResource
 
             'name_bn' => $this->name_bn,
             'name_en' => $this->name_en,
+            'student_email' => $this->whenLoaded('user', fn () => $this->user?->email),
 
             'father_name_bn' => $this->father_name_bn,
             'father_name_en' => $this->father_name_en,
@@ -59,6 +60,8 @@ class StudentResource extends JsonResource
 
             'father_mobile' => $this->father_mobile,
             'mother_mobile' => $this->mother_mobile,
+            'father_email' => $this->father_email,
+            'mother_email' => $this->mother_email,
 
             'birth_reg_no' => $this->birth_reg_no,
             'date_of_birth' => $this->date_of_birth?->toDateString(),

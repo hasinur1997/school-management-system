@@ -52,6 +52,7 @@ class AdmissionDetailResource extends JsonResource
             'present_district' => $this->present_district,
             'present_division' => $this->present_division,
             'father_mobile' => $this->father_mobile,
+            'father_email' => $this->father_email,
 
             // Item 7 — permanent address + mother mobile
             'permanent_village' => $this->permanent_village,
@@ -60,6 +61,7 @@ class AdmissionDetailResource extends JsonResource
             'permanent_district' => $this->permanent_district,
             'permanent_division' => $this->permanent_division,
             'mother_mobile' => $this->mother_mobile,
+            'mother_email' => $this->mother_email,
 
             // Items 9–11 — identity
             'birth_reg_no' => $this->birth_reg_no,

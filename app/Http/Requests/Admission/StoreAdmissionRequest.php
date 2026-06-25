@@ -53,6 +53,7 @@ class StoreAdmissionRequest extends FormRequest
             'present_district' => ['required', 'string', 'max:100'],
             'present_division' => ['required', 'string', 'max:100'],
             'father_mobile' => ['required', 'string', 'max:20'],
+            'father_email' => ['nullable', 'email', 'max:150'],
 
             // Item 7 — permanent address + mother mobile
             'permanent_village' => ['required', 'string', 'max:100'],
@@ -61,6 +62,7 @@ class StoreAdmissionRequest extends FormRequest
             'permanent_district' => ['required', 'string', 'max:100'],
             'permanent_division' => ['required', 'string', 'max:100'],
             'mother_mobile' => ['nullable', 'string', 'max:20'],
+            'mother_email' => ['nullable', 'email', 'max:150'],
 
             // Items 9–11 — identity
             'birth_reg_no' => ['required', 'string', 'max:25', Rule::unique('admission_applications', 'birth_reg_no')],

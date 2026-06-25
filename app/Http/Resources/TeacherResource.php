@@ -27,7 +27,7 @@ class TeacherResource extends JsonResource
             'id' => $this->public_id,
             'user_id' => $this->whenLoaded('user', fn () => $this->user->public_id),
             'name' => $this->name,
-            'email' => $this->email,
+            'email' => $this->whenLoaded('user', fn () => $this->user?->email, $this->email),
             'phone' => $this->phone,
             'designation' => $this->designation,
             'joining_date' => $this->joining_date?->toDateString(),

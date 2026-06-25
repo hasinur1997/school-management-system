@@ -25,9 +25,15 @@ class UpdateStudentRequest extends FormRequest
      */
     public function rules(): array
     {
+        $student = $this->route('student');
+
         return [
             'name_bn' => ['required', 'string', 'max:150'],
             'name_en' => ['required', 'string', 'max:150'],
+            'student_email' => [
+                'nullable', 'email', 'max:150',
+                Rule::unique('users', 'email')->ignore($student?->user_id),
+            ],
 
             'father_name_bn' => ['required', 'string', 'max:150'],
             'father_name_en' => ['required', 'string', 'max:150'],
@@ -51,6 +57,8 @@ class UpdateStudentRequest extends FormRequest
 
             'father_mobile' => ['required', 'string', 'max:20'],
             'mother_mobile' => ['nullable', 'string', 'max:20'],
+            'father_email' => ['nullable', 'email', 'max:150'],
+            'mother_email' => ['nullable', 'email', 'max:150'],
 
             'date_of_birth' => ['required', 'date'],
             'religion' => ['required', 'string', 'max:50'],

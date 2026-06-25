@@ -91,7 +91,7 @@ class TeacherCredentialsTest extends TestCase
         $token = $this->tokenForRole('admin');
 
         $this->withToken($token)
-            ->postJson("/api/v1/teachers/{$teacher->id}/resend-credentials")
+            ->postJson("/api/v1/teachers/{$teacher->public_id}/resend-credentials")
             ->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonPath('message', 'New credentials are being sent to the teacher.')
@@ -115,7 +115,7 @@ class TeacherCredentialsTest extends TestCase
         $newPassword = null;
         Queue::fake();
         $this->withToken($adminToken)
-            ->postJson("/api/v1/teachers/{$teacher->id}/resend-credentials")
+            ->postJson("/api/v1/teachers/{$teacher->public_id}/resend-credentials")
             ->assertOk();
         Queue::assertPushed(SendCredentials::class, function (SendCredentials $job) use (&$newPassword, $user): bool {
             $newPassword = $job->password;
@@ -148,7 +148,7 @@ class TeacherCredentialsTest extends TestCase
         $token = $this->tokenForRole('admin');
 
         $this->withToken($token)
-            ->postJson("/api/v1/teachers/{$teacher->id}/resend-credentials")
+            ->postJson("/api/v1/teachers/{$teacher->public_id}/resend-credentials")
             ->assertStatus(409)
             ->assertJsonPath('success', false)
             ->assertJsonPath('message', 'Teacher is inactive.');
@@ -175,7 +175,7 @@ class TeacherCredentialsTest extends TestCase
         $token = $this->tokenForRole('accountant');
 
         $this->withToken($token)
-            ->postJson("/api/v1/teachers/{$teacher->id}/resend-credentials")
+            ->postJson("/api/v1/teachers/{$teacher->public_id}/resend-credentials")
             ->assertStatus(403);
     }
 
@@ -185,5 +185,18 @@ class TeacherCredentialsTest extends TestCase
 
         $this->assertSame(3, $job->tries);
         $this->assertSame([60, 300], $job->backoff);
+    }
+
+    public function test_stale_queued_credentials_are_not_sent(): void
+    {
+        Mail::fake();
+
+        $user = User::factory()->create([
+            'password' => Hash::make('current-password'),
+        ]);
+
+        (new SendCredentials($user, 'old-password', 'Teacher'))->handle();
+
+        Mail::assertNothingSent();
     }
 }

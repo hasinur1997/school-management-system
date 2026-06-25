@@ -58,6 +58,9 @@ class StoreStudentRequest extends FormRequest
 
             'father_mobile' => ['required', 'string', 'max:20'],
             'mother_mobile' => ['nullable', 'string', 'max:20'],
+            'father_email' => ['nullable', 'email', 'max:150'],
+            'mother_email' => ['nullable', 'email', 'max:150'],
+            'student_email' => ['nullable', 'email', 'max:150', Rule::unique('users', 'email')],
 
             'birth_reg_no' => ['required', 'string', 'max:25', Rule::unique('students', 'birth_reg_no')],
             'date_of_birth' => ['required', 'date'],
@@ -82,6 +85,7 @@ class StoreStudentRequest extends FormRequest
 
             'create_parent_account' => ['required', 'boolean'],
             'parent_relation' => ['required_if:create_parent_account,true', Rule::in(['father', 'mother', 'guardian'])],
+            'parent_email' => ['nullable', 'email', 'max:150', Rule::unique('users', 'email')],
 
             // Non-super-admins cannot choose a branch: any submitted value is
             // ignored and the caller's own branch is used.
@@ -110,6 +114,15 @@ class StoreStudentRequest extends FormRequest
 
             if ($validator->errors()->hasAny(['class_id', 'section_id'])) {
                 return;
+            }
+
+            if (
+                $this->boolean('create_parent_account')
+                && $this->filled('student_email')
+                && $this->filled('parent_email')
+                && strcasecmp((string) $this->input('student_email'), (string) $this->input('parent_email')) === 0
+            ) {
+                $validator->errors()->add('parent_email', 'The parent email must be different from the student email.');
             }
 
             $class = SchoolClass::find($this->integer('class_id'));

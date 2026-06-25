@@ -27,6 +27,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
     'mother_name_bn', 'mother_name_en', 'mother_nid',
     'present_village', 'present_post_office', 'present_upazila', 'present_district', 'present_division', 'father_mobile',
     'permanent_village', 'permanent_post_office', 'permanent_upazila', 'permanent_district', 'permanent_division', 'mother_mobile',
+    'father_email', 'mother_email',
     'birth_reg_no', 'date_of_birth', 'religion', 'nationality', 'caste',
     'status', 'rejection_reason', 'reviewed_by', 'reviewed_at',
 ])]

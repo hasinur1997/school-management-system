@@ -56,7 +56,7 @@ class TeacherService
 
             SendCredentials::dispatch($user, $password, 'Teacher')->afterCommit();
 
-            return $teacher;
+            return $teacher->load(['media', 'user']);
         });
     }
 
@@ -84,8 +84,8 @@ class TeacherService
 
     /**
      * List teachers in the caller's branch, filtered by status and a free-text
-     * search across name/email/phone/designation, sorted and paginated. Media
-     * is eager loaded so photo_url never lazy loads in the Resource.
+     * search across name/user email/phone/designation, sorted and paginated.
+     * Media and user are eager loaded so the Resource never lazy loads them.
      *
      * @param  array<string, mixed>  $filters
      */
@@ -95,13 +95,13 @@ class TeacherService
         $direction = $filters['direction'] ?? ($sort === 'name' ? 'asc' : 'desc');
 
         return Teacher::query()
-            ->with('media')
+            ->with(['media', 'user'])
             ->when(isset($filters['status']), fn (Builder $query) => $query->where('status', $filters['status']))
             ->when(isset($filters['search']), function (Builder $query) use ($filters): void {
                 $term = '%'.$filters['search'].'%';
                 $query->where(fn (Builder $q) => $q
                     ->where('name', 'like', $term)
-                    ->orWhere('email', 'like', $term)
+                    ->orWhereHas('user', fn (Builder $user) => $user->where('email', 'like', $term))
                     ->orWhere('phone', 'like', $term)
                     ->orWhere('designation', 'like', $term));
             })
@@ -127,9 +127,9 @@ class TeacherService
     }
 
     /**
-     * Update mutable profile fields. email is immutable (login identity) and is
-     * rejected at validation. The phone is mirrored onto the login so the
-     * teacher can still sign in with it.
+     * Update mutable profile fields. Email and phone belong to the login user;
+     * email is mirrored into the legacy teacher column until that schema debt is
+     * removed.
      *
      * @param  array<string, mixed>  $data
      */
@@ -138,6 +138,7 @@ class TeacherService
         return DB::transaction(function () use ($teacher, $data): Teacher {
             $teacher->update([
                 'name' => $data['name'],
+                'email' => $data['email'],
                 'phone' => $data['phone'],
                 'designation' => $data['designation'],
                 'joining_date' => $data['joining_date'] ?? null,
@@ -145,6 +146,7 @@ class TeacherService
 
             $teacher->user->update([
                 'name' => $data['name'],
+                'email' => $data['email'],
                 'phone' => $data['phone'],
             ]);
 

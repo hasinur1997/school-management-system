@@ -61,7 +61,8 @@ class TeacherEndpointsTest extends TestCase
 
     public function test_index_filters_by_status_and_search(): void
     {
-        $this->makeTeacher(['name' => 'Rahim Uddin', 'designation' => 'Senior Teacher', 'status' => TeacherStatus::Active]);
+        $rahim = $this->makeTeacher(['name' => 'Rahim Uddin', 'designation' => 'Senior Teacher', 'status' => TeacherStatus::Active]);
+        $rahim->user->update(['email' => 'rahim.user@example.test']);
         $this->makeTeacher(['name' => 'Karim Mia', 'status' => TeacherStatus::Active]);
         $this->makeTeacher(['name' => 'Rahima Begum', 'status' => TeacherStatus::Inactive]);
 
@@ -80,6 +81,13 @@ class TeacherEndpointsTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.name', 'Rahim Uddin');
+
+        // search across the linked user's email
+        $this->withToken($token)
+            ->getJson('/api/v1/teachers?search=rahim.user')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.email', 'rahim.user@example.test');
     }
 
     public function test_index_sorts_by_name(): void
@@ -132,29 +140,45 @@ class TeacherEndpointsTest extends TestCase
         $teacher = $this->makeTeacher(['name' => 'Old Name', 'phone' => '01700000000']);
 
         $this->withToken($this->tokenForRole('admin'))
-            ->putJson("/api/v1/teachers/{$teacher->id}", [
+            ->putJson("/api/v1/teachers/{$teacher->public_id}", [
                 'name' => 'New Name',
+                'email' => 'new.teacher@example.test',
                 'phone' => '01799999999',
                 'designation' => 'Head Teacher',
             ])
             ->assertOk()
             ->assertJsonPath('data.name', 'New Name')
+            ->assertJsonPath('data.email', 'new.teacher@example.test')
             ->assertJsonPath('data.designation', 'Head Teacher');
 
-        $this->assertDatabaseHas('teachers', ['id' => $teacher->id, 'name' => 'New Name', 'phone' => '01799999999']);
-        $this->assertDatabaseHas('users', ['id' => $teacher->user_id, 'name' => 'New Name', 'phone' => '01799999999']);
+        $this->assertDatabaseHas('teachers', [
+            'id' => $teacher->id,
+            'name' => 'New Name',
+            'email' => 'new.teacher@example.test',
+            'phone' => '01799999999',
+        ]);
+        $this->assertDatabaseHas('users', [
+            'id' => $teacher->user_id,
+            'name' => 'New Name',
+            'email' => 'new.teacher@example.test',
+            'phone' => '01799999999',
+        ]);
     }
 
-    public function test_update_rejects_email_change(): void
+    public function test_update_rejects_duplicate_user_email(): void
     {
         $teacher = $this->makeTeacher();
+        $other = User::factory()->create([
+            'branch_id' => $this->branch->id,
+            'email' => 'taken@school.com',
+        ]);
 
         $this->withToken($this->tokenForRole('admin'))
-            ->putJson("/api/v1/teachers/{$teacher->id}", [
+            ->putJson("/api/v1/teachers/{$teacher->public_id}", [
                 'name' => 'New Name',
+                'email' => $other->email,
                 'phone' => '01799999999',
                 'designation' => 'Head Teacher',
-                'email' => 'changed@school.com',
             ])
             ->assertStatus(422)
             ->assertJsonValidationErrors(['email']);
@@ -238,7 +262,7 @@ class TeacherEndpointsTest extends TestCase
 
         $this->withToken($token)->getJson("/api/v1/teachers/{$teacher->id}")->assertStatus(404);
         $this->withToken($token)->putJson("/api/v1/teachers/{$teacher->id}", [
-            'name' => 'X', 'phone' => '01711111111', 'designation' => 'Y',
+            'name' => 'X', 'email' => 'x@example.test', 'phone' => '01711111111', 'designation' => 'Y',
         ])->assertStatus(404);
         $this->withToken($token)->patchJson("/api/v1/teachers/{$teacher->id}/status", ['status' => 'inactive'])->assertStatus(404);
     }

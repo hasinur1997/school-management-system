@@ -4,6 +4,7 @@ namespace Tests\Feature\Api\V1;
 
 use App\Enums\StudentStatus;
 use App\Jobs\SendCredentials;
+use App\Mail\CredentialsMail;
 use App\Models\AcademicSession;
 use App\Models\Branch;
 use App\Models\Enrollment;
@@ -16,6 +17,7 @@ use Database\Seeders\RoleSeeder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -299,6 +301,23 @@ class StudentEndpointsTest extends TestCase
             ->assertJsonValidationErrors(['birth_reg_no']);
     }
 
+    public function test_update_can_change_student_email(): void
+    {
+        $student = $this->makeStudent();
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->putJson("/api/v1/students/{$student->public_id}", $this->validUpdatePayload([
+                'student_email' => 'student.updated@example.test',
+            ]))
+            ->assertOk()
+            ->assertJsonPath('data.student_email', 'student.updated@example.test');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $student->user_id,
+            'email' => 'student.updated@example.test',
+        ]);
+    }
+
     public function test_update_enrollment_happy_path(): void
     {
         $class7 = SchoolClass::factory()->create(['branch_id' => $this->branch->id]);
@@ -487,6 +506,39 @@ class StudentEndpointsTest extends TestCase
         $student = Student::firstWhere('name_en', 'Rahim Uddin');
         $this->assertDatabaseHas('parent_student', ['student_id' => $student->id]);
         Queue::assertPushed(SendCredentials::class, fn ($job) => $job->role === 'Parent');
+    }
+
+    public function test_store_with_email_recipients_sends_student_and_parent_credentials(): void
+    {
+        Mail::fake();
+
+        $class = SchoolClass::factory()->create(['branch_id' => $this->branch->id]);
+        $section = Section::factory()->create(['class_id' => $class->id]);
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->postJson('/api/v1/students', $this->validStorePayload([
+                'class_id' => $class->public_id,
+                'section_id' => $section->public_id,
+                'roll_no' => 7,
+                'student_email' => 'student@example.test',
+                'create_parent_account' => true,
+                'parent_relation' => 'father',
+                'parent_email' => 'parent@example.test',
+            ]))
+            ->assertStatus(201)
+            ->assertJsonPath('data.student_email', 'student@example.test');
+
+        Mail::assertSent(CredentialsMail::class, function (CredentialsMail $mail): bool {
+            return $mail->hasTo('student@example.test')
+                && $mail->role === 'Student'
+                && $mail->identifier === 'student@example.test';
+        });
+
+        Mail::assertSent(CredentialsMail::class, function (CredentialsMail $mail): bool {
+            return $mail->hasTo('parent@example.test')
+                && $mail->role === 'Parent'
+                && $mail->identifier === '01712345678';
+        });
     }
 
     public function test_store_rejects_duplicate_roll_in_same_class_section(): void

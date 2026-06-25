@@ -25,7 +25,7 @@ class StudentService
 
     /**
      * Create a student directly (the office path, with no admission application)
-     * in ONE transaction: a student login (email null, phone = father_mobile,
+     * in ONE transaction: a student login (optional email, phone = father_mobile,
      * random password), the student row, its active enrollment, and — when
      * requested — a linked parent login + profile + parent_student row. The
      * branch is resolved by the caller (the caller's own, or the chosen one for
@@ -60,12 +60,13 @@ class StudentService
                 $studentPhone = null;
             }
 
-            // Student login — phone is the only identifier (email null per spec).
+            // Student login — phone is the primary identifier, email is only
+            // used when the office wants credential delivery through mail.
             $studentPassword = Str::password(10);
             $studentUser = User::create([
                 'branch_id' => $branchId,
                 'name' => $data['name_en'],
-                'email' => null,
+                'email' => $data['student_email'] ?? null,
                 'phone' => $studentPhone,
                 'password' => Hash::make($studentPassword),
                 'is_active' => true,
@@ -82,6 +83,7 @@ class StudentService
                 'present_village', 'present_post_office', 'present_upazila', 'present_district', 'present_division',
                 'permanent_village', 'permanent_post_office', 'permanent_upazila', 'permanent_district', 'permanent_division',
                 'father_mobile', 'mother_mobile',
+                'father_email', 'mother_email',
                 'birth_reg_no', 'date_of_birth', 'religion', 'nationality', 'caste',
             ]));
             $student->user_id = $studentUser->id;
@@ -105,7 +107,7 @@ class StudentService
                 $parentUser = User::create([
                     'branch_id' => $branchId,
                     'name' => $parentName,
-                    'email' => null,
+                    'email' => $data['parent_email'] ?? null,
                     'phone' => $parentPhone,
                     'password' => Hash::make($parentPassword),
                     'is_active' => true,
@@ -210,17 +212,24 @@ class StudentService
      */
     public function update(Student $student, array $data): Student
     {
-        $student->update($data);
+        return DB::transaction(function () use ($student, $data): Student {
+            if (array_key_exists('student_email', $data)) {
+                $student->user()->update(['email' => $data['student_email']]);
+                unset($data['student_email']);
+            }
 
-        return $student->load([
-            'media',
-            'user',
-            'application',
-            'branch',
-            'enrollments' => fn ($query) => $query
-                ->latest('id')
-                ->with(['session', 'schoolClass', 'section']),
-        ]);
+            $student->update($data);
+
+            return $student->load([
+                'media',
+                'user',
+                'application',
+                'branch',
+                'enrollments' => fn ($query) => $query
+                    ->latest('id')
+                    ->with(['session', 'schoolClass', 'section']),
+            ]);
+        });
     }
 
     /**
