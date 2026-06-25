@@ -71,6 +71,20 @@ class AuthTest extends TestCase
             ->assertJsonPath('data.user.id', $user->id);
     }
 
+    public function test_login_with_phone_normalizes_country_code_and_separators(): void
+    {
+        $user = User::factory()->create(['phone' => '01712345678']);
+
+        foreach (['+8801712345678', '8801712345678', '+880 1712-345678', '017 1234 5678'] as $login) {
+            $this->postJson('/api/v1/auth/login', [
+                'login' => $login,
+                'password' => 'password',
+                'device_name' => 'mobile',
+            ])->assertOk()
+                ->assertJsonPath('data.user.id', $user->public_id);
+        }
+    }
+
     public function test_login_updates_last_login_at(): void
     {
         $user = User::factory()->create();

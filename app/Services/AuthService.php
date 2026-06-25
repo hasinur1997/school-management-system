@@ -20,8 +20,10 @@ class AuthService
      */
     public function login(string $login, string $password, string $deviceName): array
     {
+        $phones = $this->phoneCandidates($login);
+
         $user = User::query()
-            ->where(fn (Builder $query) => $query->where('email', $login)->orWhere('phone', $login))
+            ->where(fn (Builder $query) => $query->where('email', $login)->orWhereIn('phone', $phones))
             ->first();
 
         if (! $user || ! Hash::check($password, $user->password)) {
@@ -40,6 +42,29 @@ class AuthService
             'token' => $user->createToken($deviceName)->plainTextToken,
             'user' => $user->load(['branch', 'media']),
         ];
+    }
+
+    /**
+     * Build the set of phone formats a login string could match. Phones are
+     * stored in local form (01XXXXXXXXX); strip separators and fold the
+     * +880/880 country code down to the leading 0 so a user can type any of
+     * "+8801712345678", "880 1712-345678" or "01712345678".
+     *
+     * @return array<int, string>
+     */
+    private function phoneCandidates(string $login): array
+    {
+        $digits = preg_replace('/[\s\-()]/', '', $login);
+
+        $local = $digits;
+
+        if (str_starts_with($local, '+880')) {
+            $local = '0'.substr($local, 4);
+        } elseif (str_starts_with($local, '880')) {
+            $local = '0'.substr($local, 3);
+        }
+
+        return array_values(array_unique([$login, $digits, $local]));
     }
 
     /**
