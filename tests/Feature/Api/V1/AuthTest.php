@@ -4,6 +4,7 @@ namespace Tests\Feature\Api\V1;
 
 use App\Models\Branch;
 use App\Models\ParentProfile;
+use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -40,7 +41,7 @@ class AuthTest extends TestCase
                 'message' => 'Login successful',
                 'data' => [
                     'user' => [
-                        'id' => $user->id,
+                        'id' => $user->public_id,
                         'name' => $user->name,
                         'email' => 'teacher@school.com',
                         'phone' => $user->phone,
@@ -68,7 +69,7 @@ class AuthTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('success', true)
-            ->assertJsonPath('data.user.id', $user->id);
+            ->assertJsonPath('data.user.id', $user->public_id);
     }
 
     public function test_login_with_phone_normalizes_country_code_and_separators(): void
@@ -186,7 +187,7 @@ class AuthTest extends TestCase
             ->assertJson([
                 'success' => true,
                 'data' => [
-                    'id' => $user->id,
+                    'id' => $user->public_id,
                     'name' => $user->name,
                     'email' => $user->email,
                     'phone' => $user->phone,
@@ -196,6 +197,29 @@ class AuthTest extends TestCase
                     'permissions' => [],
                 ],
             ]);
+    }
+
+    public function test_me_returns_linked_student_reference_for_student_accounts(): void
+    {
+        $branch = Branch::factory()->create();
+        $user = User::factory()->create([
+            'branch_id' => $branch->id,
+            'name' => 'Student User',
+        ]);
+        $student = Student::factory()->for($user)->for($branch)->create([
+            'name_en' => 'Amina Rahman',
+            'name_bn' => 'আমিনা রহমান',
+        ]);
+        $token = $user->createToken('web')->plainTextToken;
+
+        $this->withToken($token)->getJson('/api/v1/auth/me')
+            ->assertOk()
+            ->assertJsonPath('data.branch_id', $branch->public_id)
+            ->assertJsonPath('data.branch.id', $branch->public_id)
+            ->assertJsonPath('data.branch.name', $branch->name)
+            ->assertJsonPath('data.student_id', $student->public_id)
+            ->assertJsonPath('data.student.id', $student->public_id)
+            ->assertJsonPath('data.student.name', 'Amina Rahman');
     }
 
     public function test_me_without_token_returns_unauthenticated(): void

@@ -26,6 +26,7 @@ class SettingRegistry
         'sslcommerz_sandbox' => ['scope' => self::GLOBAL, 'type' => 'bool', 'secret' => false],
         'mail_from' => ['scope' => self::GLOBAL, 'type' => 'string', 'secret' => false],
         'sms_api_key' => ['scope' => self::GLOBAL, 'type' => 'string', 'secret' => true],
+        'sms_sender_id' => ['scope' => self::GLOBAL, 'type' => 'string', 'secret' => false],
         'partial_payment_enabled' => ['scope' => self::BRANCH, 'type' => 'bool', 'secret' => false],
         'late_fee_enabled' => ['scope' => self::BRANCH, 'type' => 'bool', 'secret' => false],
         'teacher_late_threshold' => ['scope' => self::BRANCH, 'type' => 'time', 'secret' => false],

@@ -3,6 +3,9 @@
 | Method | URI | Permission | Description |
 |---|---|---|---|
 | POST | /auth/login | Public | Login with email or phone + password |
+| POST | /auth/forgot-password | Public | Send password reset code to matching account email/phone |
+| POST | /auth/verify-reset-code | Public | Verify reset code and issue temporary reset token |
+| POST | /auth/reset-password | Public | Set new password with verified reset token |
 | POST | /auth/logout | Authenticated | Revoke current token |
 | GET | /auth/me | Authenticated | Current user, roles, permissions, branch, profile |
 | PUT | /auth/profile | Authenticated | Update current user's account details |
@@ -13,6 +16,21 @@
 Request: `{ "login": "email or phone", "password": "string", "device_name": "string" }`
 Response `data`: `{ "token": "...", "user": { id, name, email, phone, branch, roles: [], permissions: [] } }`
 Errors: 422 invalid credentials; 403 inactive account.
+
+## POST /auth/forgot-password
+Request: `{ "login": "email or phone" }`
+Response `data`: `null`
+Always returns a generic success message for valid input. If an active account matches, a one-time code is queued to its email and/or phone.
+
+## POST /auth/verify-reset-code
+Request: `{ "login": "email or phone", "code": "string" }`
+Response `data`: `{ "reset_token": "temporary token" }`
+Errors: 422 invalid/expired/exhausted code. The UI should keep `login` hidden from the user after the first step and only ask for the code.
+
+## POST /auth/reset-password
+Request: `{ "reset_token": "temporary token", "password": "string", "password_confirmation": "string" }`
+Response `data`: `null`
+Errors: 422 invalid/expired token or invalid password. On success, all existing tokens for the account are revoked.
 
 ## GET /auth/me
 Response `data` includes `id`, `name`, `email`, `phone`, `branch_id`, `is_active`, `photo_url`, `roles`, and effective `permissions`.

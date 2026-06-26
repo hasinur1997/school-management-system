@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\ApiController;
 use App\Http\Requests\Auth\ChangePasswordRequest;
+use App\Http\Requests\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Http\Requests\Auth\UploadProfilePhotoRequest;
+use App\Http\Requests\Auth\VerifyResetCodeRequest;
 use App\Http\Resources\UserResource;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
@@ -29,8 +32,47 @@ class AuthController extends ApiController
 
         return $this->success([
             'token' => $result['token'],
-            'user' => UserResource::make($result['user']),
+            'user' => UserResource::make($result['user']->load(['branch', 'media', 'student'])),
         ], 'Login successful');
+    }
+
+    /**
+     * Issue a one-time reset code to the account matching the login. Always
+     * returns the same message so callers cannot probe which accounts exist.
+     */
+    public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
+    {
+        $this->authService->sendPasswordResetCode($request->validated('login'));
+
+        return $this->success(null, 'If an account matches, a reset code has been sent.');
+    }
+
+    /**
+     * Verify a reset code before showing the new-password form.
+     */
+    public function verifyResetCode(VerifyResetCodeRequest $request): JsonResponse
+    {
+        $resetToken = $this->authService->verifyResetCode(
+            $request->validated('login'),
+            $request->validated('code'),
+        );
+
+        return $this->success([
+            'reset_token' => $resetToken,
+        ], 'Reset code verified.');
+    }
+
+    /**
+     * Set a new password after a reset code has been verified.
+     */
+    public function resetPassword(ResetPasswordRequest $request): JsonResponse
+    {
+        $this->authService->resetPassword(
+            $request->validated('reset_token'),
+            $request->validated('password'),
+        );
+
+        return $this->success(null, 'Password has been reset. Please log in.');
     }
 
     /**
@@ -38,7 +80,7 @@ class AuthController extends ApiController
      */
     public function me(Request $request): JsonResponse
     {
-        return $this->success(UserResource::make($request->user()->load(['branch', 'media'])));
+        return $this->success(UserResource::make($request->user()->load(['branch', 'media', 'student'])));
     }
 
     /**
@@ -48,7 +90,7 @@ class AuthController extends ApiController
     {
         $user = $this->authService->updateProfile($request->user(), $request->validated());
 
-        return $this->success(UserResource::make($user), 'Profile updated');
+        return $this->success(UserResource::make($user->load(['branch', 'media', 'student'])), 'Profile updated');
     }
 
     /**
@@ -58,7 +100,7 @@ class AuthController extends ApiController
     {
         $user = $this->authService->setPhoto($request->user(), $request->file('photo'));
 
-        return $this->success(UserResource::make($user), 'Profile photo updated');
+        return $this->success(UserResource::make($user->load(['branch', 'media', 'student'])), 'Profile photo updated');
     }
 
     /**

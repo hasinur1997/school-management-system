@@ -114,4 +114,21 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Password Reset OTP Code
+    |--------------------------------------------------------------------------
+    |
+    | Tunables for the forgot-password flow: the number of digits in the code,
+    | how many minutes it stays valid, and how many verification attempts are
+    | allowed before the code is burned and a new one must be requested.
+    |
+    */
+
+    'reset_code' => [
+        'length' => env('AUTH_RESET_CODE_LENGTH', 6),
+        'ttl' => env('AUTH_RESET_CODE_TTL', 15),
+        'max_attempts' => env('AUTH_RESET_CODE_MAX_ATTEMPTS', 5),
+    ],
+
 ];

@@ -77,6 +77,24 @@ class SettingsRepository
     }
 
     /**
+     * BulkSMSBD API key used to authenticate outgoing SMS.
+     */
+    public function smsApiKey(): ?string
+    {
+        return $this->settings->get('sms_api_key')
+            ?? config('services.bulksmsbd.api_key');
+    }
+
+    /**
+     * Approved BulkSMSBD sender id shown as the SMS originator.
+     */
+    public function smsSenderId(): ?string
+    {
+        return $this->settings->get('sms_sender_id')
+            ?? config('services.bulksmsbd.sender_id');
+    }
+
+    /**
      * Resolve the branch context for a branch-scoped lookup: the explicit
      * argument, then the authenticated user's branch.
      */

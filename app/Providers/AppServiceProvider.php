@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Contracts\PaymentGateway;
+use App\Contracts\SmsGateway;
 use App\Services\Payments\SslCommerzGateway;
+use App\Services\Sms\BulkSmsBdGateway;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\ServiceProvider;
 
@@ -16,6 +18,9 @@ class AppServiceProvider extends ServiceProvider
     {
         // The default payment gateway is SSLCommerz; tests rebind the FakeGateway.
         $this->app->bind(PaymentGateway::class, SslCommerzGateway::class);
+
+        // The default SMS gateway is BulkSMSBD; tests fake the HTTP client.
+        $this->app->bind(SmsGateway::class, BulkSmsBdGateway::class);
     }
 
     /**
