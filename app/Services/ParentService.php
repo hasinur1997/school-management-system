@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Jobs\SendCredentials;
 use App\Models\ParentProfile;
+use App\Models\Scopes\BranchScope;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -87,6 +88,94 @@ class ParentService
 
             return $parent->load(self::WITH);
         });
+    }
+
+    /**
+     * Ensure exactly one parent account owns the submitted contact, then link it
+     * to the student. A matching parent is reused by email or phone; a contact
+     * already held by another account type is rejected before the database
+     * unique constraints can surface as a low-level error.
+     *
+     * @return array{parent: ParentProfile, created: bool}
+     */
+    public function ensureLinkedAccount(
+        int $branchId,
+        string $name,
+        string $phone,
+        ?string $email,
+        string $relation,
+        Student $student,
+    ): array {
+        $email = $email !== null && trim($email) !== '' ? $email : null;
+        $phone = trim($phone);
+
+        if ($phone === '') {
+            abort(422, 'A parent phone number is required.');
+        }
+
+        $matchedUsers = User::withTrashed()
+            ->where(function (Builder $query) use ($email, $phone): void {
+                if ($email !== null) {
+                    $query->where('email', $email)
+                        ->orWhere('phone', $phone);
+
+                    return;
+                }
+
+                $query->where('phone', $phone);
+            })
+            ->get();
+
+        if ($matchedUsers->count() > 1) {
+            abort(422, 'Parent email and phone belong to different accounts.');
+        }
+
+        if ($matchedUsers->count() === 1) {
+            $user = $matchedUsers->first();
+            $parent = ParentProfile::withoutGlobalScope(BranchScope::class)
+                ->where('user_id', $user->id)
+                ->first();
+
+            if ($user->trashed() || $parent === null || ! $user->hasRole('parent')) {
+                abort(422, 'The parent contact is already used by another account.');
+            }
+
+            if ((int) $parent->branch_id !== $branchId) {
+                abort(422, 'The matched parent belongs to another branch.');
+            }
+
+            $parent->students()->syncWithoutDetaching([$student->id]);
+
+            return ['parent' => $parent->load(self::WITH), 'created' => false];
+        }
+
+        $password = Str::password(10);
+
+        $user = User::create([
+            'branch_id' => $branchId,
+            'name' => $name,
+            'email' => $email,
+            'phone' => $phone,
+            'password' => Hash::make($password),
+            'is_active' => true,
+        ]);
+
+        $user->assignRole('parent');
+
+        $parent = new ParentProfile([
+            'user_id' => $user->id,
+            'name' => $name,
+            'phone' => $phone,
+            'relation' => $relation,
+        ]);
+        $parent->branch_id = $branchId;
+        $parent->save();
+
+        $parent->students()->syncWithoutDetaching([$student->id]);
+
+        SendCredentials::dispatch($user, $password, 'Parent')->afterCommit();
+
+        return ['parent' => $parent->load(self::WITH), 'created' => true];
     }
 
     /**

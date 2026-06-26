@@ -107,10 +107,8 @@ class AdmissionApproveRejectTest extends TestCase
             ->assertJsonPath('data.student.enrollment.roll_no', 12)
             ->assertJsonPath('data.parent_created', false);
 
-        $studentId = $response->json('data.student.id');
-
         // Application data copied faithfully (identity + address fields).
-        $student = Student::find($studentId);
+        $student = Student::where('application_id', $application->id)->firstOrFail();
         $this->assertSame('Karim Hossain', $student->name_en);
         $this->assertSame('করিম হোসেন', $student->name_bn);
         $this->assertSame('Shibganj', $student->present_village);
@@ -129,7 +127,7 @@ class AdmissionApproveRejectTest extends TestCase
         $this->assertTrue($user->hasRole('student'));
 
         // Enrollment is active.
-        $enrollment = Enrollment::where('student_id', $studentId)->firstOrFail();
+        $enrollment = Enrollment::where('student_id', $student->id)->firstOrFail();
         $this->assertSame(EnrollmentStatus::Active, $enrollment->status);
         $this->assertSame(12, $enrollment->roll_no);
 
@@ -160,7 +158,7 @@ class AdmissionApproveRejectTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.parent_created', true);
 
-        $studentId = $response->json('data.student.id');
+        $student = Student::where('application_id', $application->id)->firstOrFail();
 
         $parent = ParentProfile::where('relation', 'father')->firstOrFail();
         $this->assertSame('Abdul Karim', $parent->name);
@@ -170,20 +168,95 @@ class AdmissionApproveRejectTest extends TestCase
         // Pivot link exists (so parent /me/students will work in Phase 4).
         $this->assertDatabaseHas('parent_student', [
             'parent_id' => $parent->id,
-            'student_id' => $studentId,
+            'student_id' => $student->id,
         ]);
-        $this->assertTrue($parent->students()->whereKey($studentId)->exists());
+        $this->assertTrue($parent->students()->whereKey($student->id)->exists());
 
         // The father owns the shared mobile (users.phone is unique), so the
         // parent login claims it and the student's login phone is left null.
         $parentUser = User::find($parent->user_id);
         $this->assertTrue($parentUser->hasRole('parent'));
         $this->assertSame('01722222222', $parentUser->phone);
-        $this->assertNull(Student::find($studentId)->user->phone);
+        $this->assertNull($student->user->phone);
 
         // Credentials dispatched for both student and parent.
         Queue::assertPushed(SendCredentials::class, fn ($job) => $job->role === 'Student');
         Queue::assertPushed(SendCredentials::class, fn ($job) => $job->role === 'Parent' && $job->user->id === $parentUser->id);
+    }
+
+    public function test_approve_defaults_to_parent_creation_when_toggle_is_omitted(): void
+    {
+        Queue::fake();
+
+        $application = $this->makeApplication([
+            'father_name_en' => 'Default Father',
+            'father_mobile' => '01733333333',
+        ]);
+
+        $payload = $this->approvePayload([
+            'admission_no' => 'STU-JA-2026-0020',
+        ]);
+        unset($payload['create_parent_account']);
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->postJson("/api/v1/admissions/{$application->public_id}/approve", $payload)
+            ->assertOk()
+            ->assertJsonPath('data.parent_created', true);
+
+        $student = Student::where('application_id', $application->id)->firstOrFail();
+        $parent = ParentProfile::firstOrFail();
+
+        $this->assertSame('Default Father', $parent->name);
+        $this->assertSame('01733333333', $parent->phone);
+        $this->assertSame('father', $parent->relation);
+        $this->assertDatabaseHas('parent_student', [
+            'parent_id' => $parent->id,
+            'student_id' => $student->id,
+        ]);
+        Queue::assertPushed(SendCredentials::class, fn ($job) => $job->role === 'Parent');
+    }
+
+    public function test_approve_reuses_existing_parent_by_email_without_duplicate(): void
+    {
+        Queue::fake();
+
+        $parentUser = User::factory()->create([
+            'branch_id' => $this->branch->id,
+            'email' => 'father@example.test',
+            'phone' => '01899999999',
+        ]);
+        $parentUser->assignRole('parent');
+
+        $parent = ParentProfile::factory()->create([
+            'branch_id' => $this->branch->id,
+            'user_id' => $parentUser->id,
+            'phone' => '01899999999',
+            'relation' => 'father',
+        ]);
+
+        $application = $this->makeApplication([
+            'father_name_en' => 'Existing Father',
+            'father_mobile' => '01744444444',
+            'father_email' => 'father@example.test',
+        ]);
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->postJson("/api/v1/admissions/{$application->public_id}/approve", $this->approvePayload([
+                'create_parent_account' => true,
+                'parent_relation' => 'father',
+            ]))
+            ->assertOk()
+            ->assertJsonPath('data.parent_created', false);
+
+        $student = Student::where('application_id', $application->id)->firstOrFail();
+
+        $this->assertSame(1, ParentProfile::count());
+        $this->assertDatabaseHas('parent_student', [
+            'parent_id' => $parent->id,
+            'student_id' => $student->id,
+        ]);
+        Queue::assertPushed(SendCredentials::class, 1);
+        Queue::assertNotPushed(SendCredentials::class, fn ($job) => $job->role === 'Parent');
     }
 
     public function test_mid_transaction_failure_rolls_back_everything(): void

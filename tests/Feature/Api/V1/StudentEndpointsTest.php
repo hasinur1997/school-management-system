@@ -8,6 +8,7 @@ use App\Mail\CredentialsMail;
 use App\Models\AcademicSession;
 use App\Models\Branch;
 use App\Models\Enrollment;
+use App\Models\ParentProfile;
 use App\Models\SchoolClass;
 use App\Models\Section;
 use App\Models\Student;
@@ -143,13 +144,13 @@ class StudentEndpointsTest extends TestCase
 
         // own show
         $this->withToken($token)
-            ->getJson("/api/v1/students/{$student->id}")
+            ->getJson("/api/v1/students/{$student->public_id}")
             ->assertOk()
-            ->assertJsonPath('data.id', $student->id);
+            ->assertJsonPath('data.id', $student->public_id);
 
         // another student → 404 (policy denies, existence hidden)
         $this->withToken($token)
-            ->getJson("/api/v1/students/{$other->id}")
+            ->getJson("/api/v1/students/{$other->public_id}")
             ->assertStatus(404);
 
         // cannot access the list (lacks student.view)
@@ -167,9 +168,9 @@ class StudentEndpointsTest extends TestCase
         );
 
         $this->withToken($this->tokenForRole('admin'))
-            ->getJson("/api/v1/students/{$student->id}")
+            ->getJson("/api/v1/students/{$student->public_id}")
             ->assertOk()
-            ->assertJsonPath('data.id', $student->id)
+            ->assertJsonPath('data.id', $student->public_id)
             ->assertJsonPath('data.permanent_district', $student->permanent_district)
             ->assertJsonCount(1, 'data.enrollments')
             ->assertJsonPath('data.enrollments.0.roll_no', 5);
@@ -187,7 +188,7 @@ class StudentEndpointsTest extends TestCase
         $student = $this->makeStudent(['name_en' => 'Old Name']);
 
         $this->withToken($this->tokenForRole('admin'))
-            ->putJson("/api/v1/students/{$student->id}", $this->validUpdatePayload(['name_en' => 'New Name']))
+            ->putJson("/api/v1/students/{$student->public_id}", $this->validUpdatePayload(['name_en' => 'New Name']))
             ->assertOk()
             ->assertJsonPath('data.name_en', 'New Name');
 
@@ -199,7 +200,7 @@ class StudentEndpointsTest extends TestCase
         $student = $this->makeStudent();
 
         $this->withToken($this->tokenForRole('admin'))
-            ->putJson("/api/v1/students/{$student->id}", $this->validUpdatePayload(['admission_no' => 'HACK-0001']))
+            ->putJson("/api/v1/students/{$student->public_id}", $this->validUpdatePayload(['admission_no' => 'HACK-0001']))
             ->assertStatus(422)
             ->assertJsonValidationErrors(['admission_no']);
     }
@@ -210,12 +211,12 @@ class StudentEndpointsTest extends TestCase
         $token = $this->tokenForRole('admin');
 
         $this->withToken($token)
-            ->patchJson("/api/v1/students/{$student->id}/status", ['status' => 'inactive'])
+            ->patchJson("/api/v1/students/{$student->public_id}/status", ['status' => 'inactive'])
             ->assertOk()
             ->assertJsonPath('data.status', 'inactive');
 
         $this->withToken($token)
-            ->patchJson("/api/v1/students/{$student->id}/status", ['status' => 'tc'])
+            ->patchJson("/api/v1/students/{$student->public_id}/status", ['status' => 'tc'])
             ->assertStatus(422)
             ->assertJsonValidationErrors(['status']);
     }
@@ -227,7 +228,7 @@ class StudentEndpointsTest extends TestCase
         $token = $this->tokenForRole('admin');
 
         $first = $this->withToken($token)
-            ->postJson("/api/v1/students/{$student->id}/photo", [
+            ->postJson("/api/v1/students/{$student->public_id}/photo", [
                 'photo' => UploadedFile::fake()->image('first.jpg'),
             ])
             ->assertOk();
@@ -236,7 +237,7 @@ class StudentEndpointsTest extends TestCase
 
         // Replacement keeps a single file.
         $this->withToken($token)
-            ->postJson("/api/v1/students/{$student->id}/photo", [
+            ->postJson("/api/v1/students/{$student->public_id}/photo", [
                 'photo' => UploadedFile::fake()->image('second.png'),
             ])
             ->assertOk();
@@ -244,7 +245,7 @@ class StudentEndpointsTest extends TestCase
 
         // Wrong type rejected.
         $this->withToken($token)
-            ->postJson("/api/v1/students/{$student->id}/photo", [
+            ->postJson("/api/v1/students/{$student->public_id}/photo", [
                 'photo' => UploadedFile::fake()->create('doc.pdf', 100, 'application/pdf'),
             ])
             ->assertStatus(422)
@@ -252,7 +253,7 @@ class StudentEndpointsTest extends TestCase
 
         // Oversize rejected.
         $this->withToken($token)
-            ->postJson("/api/v1/students/{$student->id}/photo", [
+            ->postJson("/api/v1/students/{$student->public_id}/photo", [
                 'photo' => UploadedFile::fake()->image('big.jpg')->size(3000),
             ])
             ->assertStatus(422)
@@ -321,9 +322,9 @@ class StudentEndpointsTest extends TestCase
         $student = $this->makeStudent([], $other);
         $token = $this->tokenForRole('admin');
 
-        $this->withToken($token)->getJson("/api/v1/students/{$student->id}")->assertStatus(404);
+        $this->withToken($token)->getJson("/api/v1/students/{$student->public_id}")->assertStatus(404);
         $this->withToken($token)
-            ->putJson("/api/v1/students/{$student->id}", $this->validUpdatePayload())
+            ->putJson("/api/v1/students/{$student->public_id}", $this->validUpdatePayload())
             ->assertStatus(404);
     }
 
@@ -562,6 +563,78 @@ class StudentEndpointsTest extends TestCase
         $student = Student::firstWhere('name_en', 'Rahim Uddin');
         $this->assertDatabaseHas('parent_student', ['student_id' => $student->id]);
         Queue::assertPushed(SendCredentials::class, fn ($job) => $job->role === 'Parent');
+    }
+
+    public function test_store_defaults_to_parent_creation_when_toggle_is_omitted(): void
+    {
+        Queue::fake();
+
+        $class = SchoolClass::factory()->create(['branch_id' => $this->branch->id]);
+        $section = Section::factory()->create(['class_id' => $class->id]);
+
+        $payload = $this->validStorePayload([
+            'class_id' => $class->public_id,
+            'section_id' => $section->public_id,
+            'roll_no' => 7,
+        ]);
+        unset($payload['create_parent_account']);
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->postJson('/api/v1/students', $payload)
+            ->assertStatus(201);
+
+        $student = Student::firstWhere('name_en', 'Rahim Uddin');
+        $parent = ParentProfile::firstOrFail();
+
+        $this->assertSame('Karim Uddin', $parent->name);
+        $this->assertSame('father', $parent->relation);
+        $this->assertDatabaseHas('parent_student', [
+            'parent_id' => $parent->id,
+            'student_id' => $student->id,
+        ]);
+        Queue::assertPushed(SendCredentials::class, fn ($job) => $job->role === 'Parent');
+    }
+
+    public function test_store_reuses_existing_parent_by_phone_without_duplicate(): void
+    {
+        Queue::fake();
+
+        $class = SchoolClass::factory()->create(['branch_id' => $this->branch->id]);
+        $section = Section::factory()->create(['class_id' => $class->id]);
+
+        $parentUser = User::factory()->create([
+            'branch_id' => $this->branch->id,
+            'phone' => '01712345678',
+        ]);
+        $parentUser->assignRole('parent');
+
+        $parent = ParentProfile::factory()->create([
+            'branch_id' => $this->branch->id,
+            'user_id' => $parentUser->id,
+            'phone' => '01712345678',
+            'relation' => 'father',
+        ]);
+
+        $payload = $this->validStorePayload([
+            'class_id' => $class->public_id,
+            'section_id' => $section->public_id,
+            'roll_no' => 7,
+        ]);
+        unset($payload['create_parent_account'], $payload['parent_relation']);
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->postJson('/api/v1/students', $payload)
+            ->assertStatus(201);
+
+        $student = Student::firstWhere('name_en', 'Rahim Uddin');
+
+        $this->assertSame(1, ParentProfile::count());
+        $this->assertDatabaseHas('parent_student', [
+            'parent_id' => $parent->id,
+            'student_id' => $student->id,
+        ]);
+        Queue::assertPushed(SendCredentials::class, 1);
+        Queue::assertNotPushed(SendCredentials::class, fn ($job) => $job->role === 'Parent');
     }
 
     public function test_store_with_email_recipients_sends_student_and_parent_credentials(): void

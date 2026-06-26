@@ -25,6 +25,21 @@ class ApproveAdmissionRequest extends FormRequest
     }
 
     /**
+     * Approval creates a linked father parent account unless the office
+     * explicitly opts out or chooses another relation.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (! $this->exists('create_parent_account')) {
+            $this->merge(['create_parent_account' => true]);
+        }
+
+        if ($this->boolean('create_parent_account') && ! $this->exists('parent_relation')) {
+            $this->merge(['parent_relation' => 'father']);
+        }
+    }
+
+    /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array

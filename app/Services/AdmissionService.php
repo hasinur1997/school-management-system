@@ -9,7 +9,6 @@ use App\Jobs\SendCredentials;
 use App\Models\AcademicSession;
 use App\Models\AdmissionApplication;
 use App\Models\Enrollment;
-use App\Models\ParentProfile;
 use App\Models\SchoolClass;
 use App\Models\Section;
 use App\Models\Student;
@@ -33,6 +32,7 @@ class AdmissionService
     public function __construct(
         private readonly ApplicationNoGenerator $applicationNos,
         private readonly AdmissionNoGenerator $admissionNos,
+        private readonly ParentService $parents,
     ) {}
 
     /**
@@ -155,13 +155,21 @@ class AdmissionService
             // users.phone: the parent is the human who actually owns the shared
             // number and must be able to log in, so they claim it and the
             // student's phone is left null when the two would be identical.
-            $createParent = (bool) $data['create_parent_account'];
-            $parentName = $parentPhone = null;
+            $createParent = (bool) ($data['create_parent_account'] ?? true);
+            $parentName = $parentPhone = $parentEmail = null;
 
             if ($createParent) {
-                [$parentName, $parentPhone] = match ($data['parent_relation']) {
-                    'mother' => [$application->mother_name_en, $application->mother_mobile ?: $application->father_mobile],
-                    default => [$application->father_name_en, $application->father_mobile],
+                [$parentName, $parentPhone, $parentEmail] = match ($data['parent_relation']) {
+                    'mother' => [
+                        $application->mother_name_en,
+                        $application->mother_mobile ?: $application->father_mobile,
+                        $application->mother_email,
+                    ],
+                    default => [
+                        $application->father_name_en,
+                        $application->father_mobile,
+                        $application->father_email,
+                    ],
                 };
             }
 
@@ -221,30 +229,16 @@ class AdmissionService
             $parentCreated = false;
 
             if ($createParent) {
-                $parentPassword = Str::password(10);
-                $parentUser = User::create([
-                    'branch_id' => $branchId,
-                    'name' => $parentName,
-                    'email' => null,
-                    'phone' => $parentPhone,
-                    'password' => Hash::make($parentPassword),
-                    'is_active' => true,
-                ]);
-                $parentUser->assignRole('parent');
+                $parentResult = $this->parents->ensureLinkedAccount(
+                    $branchId,
+                    $parentName,
+                    $parentPhone,
+                    $parentEmail,
+                    $data['parent_relation'],
+                    $student,
+                );
 
-                $parent = new ParentProfile([
-                    'user_id' => $parentUser->id,
-                    'name' => $parentName,
-                    'phone' => $parentPhone,
-                    'relation' => $data['parent_relation'],
-                ]);
-                $parent->branch_id = $branchId;
-                $parent->save();
-
-                $parent->students()->attach($student->id);
-                $parentCreated = true;
-
-                SendCredentials::dispatch($parentUser, $parentPassword, 'Parent')->afterCommit();
+                $parentCreated = $parentResult['created'];
             }
 
             $application->update([

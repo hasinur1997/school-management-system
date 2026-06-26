@@ -7,7 +7,6 @@ use App\Enums\StudentStatus;
 use App\Jobs\SendCredentials;
 use App\Models\AcademicSession;
 use App\Models\Enrollment;
-use App\Models\ParentProfile;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -21,7 +20,10 @@ use Illuminate\Support\Str;
 
 class StudentService
 {
-    public function __construct(private readonly AdmissionNoGenerator $admissionNos) {}
+    public function __construct(
+        private readonly AdmissionNoGenerator $admissionNos,
+        private readonly ParentService $parents,
+    ) {}
 
     /**
      * Create a student directly (the office path, with no admission application)
@@ -45,13 +47,21 @@ class StudentService
             // student/parent logins never collide on the globally-unique
             // users.phone: the parent owns the shared number and the student's
             // phone is left null when the two would be identical.
-            $createParent = (bool) $data['create_parent_account'];
-            $parentName = $parentPhone = null;
+            $createParent = (bool) ($data['create_parent_account'] ?? true);
+            $parentName = $parentPhone = $parentEmail = null;
 
             if ($createParent) {
-                [$parentName, $parentPhone] = match ($data['parent_relation']) {
-                    'mother' => [$data['mother_name_en'], $data['mother_mobile'] ?: $data['father_mobile']],
-                    default => [$data['father_name_en'], $data['father_mobile']],
+                [$parentName, $parentPhone, $parentEmail] = match ($data['parent_relation']) {
+                    'mother' => [
+                        $data['mother_name_en'],
+                        $data['mother_mobile'] ?: $data['father_mobile'],
+                        $data['parent_email'] ?? $data['mother_email'] ?? null,
+                    ],
+                    default => [
+                        $data['father_name_en'],
+                        $data['father_mobile'],
+                        $data['parent_email'] ?? $data['father_email'] ?? null,
+                    ],
                 };
             }
 
@@ -103,29 +113,14 @@ class StudentService
             ]);
 
             if ($createParent) {
-                $parentPassword = Str::password(10);
-                $parentUser = User::create([
-                    'branch_id' => $branchId,
-                    'name' => $parentName,
-                    'email' => $data['parent_email'] ?? null,
-                    'phone' => $parentPhone,
-                    'password' => Hash::make($parentPassword),
-                    'is_active' => true,
-                ]);
-                $parentUser->assignRole('parent');
-
-                $parent = new ParentProfile([
-                    'user_id' => $parentUser->id,
-                    'name' => $parentName,
-                    'phone' => $parentPhone,
-                    'relation' => $data['parent_relation'],
-                ]);
-                $parent->branch_id = $branchId;
-                $parent->save();
-
-                $parent->students()->attach($student->id);
-
-                SendCredentials::dispatch($parentUser, $parentPassword, 'Parent')->afterCommit();
+                $this->parents->ensureLinkedAccount(
+                    $branchId,
+                    $parentName,
+                    $parentPhone,
+                    $parentEmail,
+                    $data['parent_relation'],
+                    $student,
+                );
             }
 
             SendCredentials::dispatch($studentUser, $studentPassword, 'Student')->afterCommit();

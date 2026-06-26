@@ -28,6 +28,22 @@ class StoreStudentRequest extends FormRequest
     }
 
     /**
+     * Parent accounts are the default office workflow. If the client omits the
+     * toggle/relation, create a father account from the submitted father
+     * contact details.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (! $this->exists('create_parent_account')) {
+            $this->merge(['create_parent_account' => true]);
+        }
+
+        if ($this->boolean('create_parent_account') && ! $this->exists('parent_relation')) {
+            $this->merge(['parent_relation' => 'father']);
+        }
+    }
+
+    /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
@@ -85,7 +101,7 @@ class StoreStudentRequest extends FormRequest
 
             'create_parent_account' => ['required', 'boolean'],
             'parent_relation' => ['required_if:create_parent_account,true', Rule::in(['father', 'mother', 'guardian'])],
-            'parent_email' => ['nullable', 'email', 'max:150', Rule::unique('users', 'email')],
+            'parent_email' => ['nullable', 'email', 'max:150'],
 
             // Non-super-admins cannot choose a branch: any submitted value is
             // ignored and the caller's own branch is used.
@@ -119,8 +135,8 @@ class StoreStudentRequest extends FormRequest
             if (
                 $this->boolean('create_parent_account')
                 && $this->filled('student_email')
-                && $this->filled('parent_email')
-                && strcasecmp((string) $this->input('student_email'), (string) $this->input('parent_email')) === 0
+                && ($parentEmail = $this->resolvedParentEmail()) !== null
+                && strcasecmp((string) $this->input('student_email'), $parentEmail) === 0
             ) {
                 $validator->errors()->add('parent_email', 'The parent email must be different from the student email.');
             }
@@ -152,5 +168,18 @@ class StoreStudentRequest extends FormRequest
         }
 
         return (int) $this->user()->branch_id;
+    }
+
+    /**
+     * The email that will identify the parent account, if any.
+     */
+    private function resolvedParentEmail(): ?string
+    {
+        $email = $this->input('parent_email') ?: match ($this->input('parent_relation')) {
+            'mother' => $this->input('mother_email'),
+            default => $this->input('father_email'),
+        };
+
+        return is_string($email) && trim($email) !== '' ? $email : null;
     }
 }
