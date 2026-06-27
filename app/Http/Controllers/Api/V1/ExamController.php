@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\ApiController;
+use App\Http\Requests\Exam\BulkDeleteExamsRequest;
 use App\Http\Requests\Exam\ListExamsRequest;
 use App\Http\Requests\Exam\StoreExamRequest;
 use App\Http\Requests\Exam\UpdateExamRequest;
@@ -64,5 +65,26 @@ class ExamController extends ApiController
         $exam = $this->exams->update($exam, $request->validated());
 
         return $this->success(ExamResource::make($exam), 'Exam updated');
+    }
+
+    /**
+     * Delete an exam (and its marks/results). Out-of-branch ids 404 via the
+     * BranchScope binding.
+     */
+    public function destroy(Exam $exam): JsonResponse
+    {
+        $this->exams->delete($exam);
+
+        return $this->success(null, 'Exam deleted');
+    }
+
+    /**
+     * Delete several exams by public id (branch-scoped; foreign ids skipped).
+     */
+    public function bulkDestroy(BulkDeleteExamsRequest $request): JsonResponse
+    {
+        $deleted = $this->exams->bulkDelete($request->validated('ids'));
+
+        return $this->success(['deleted' => $deleted], 'Exams deleted');
     }
 }

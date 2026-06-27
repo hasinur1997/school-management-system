@@ -91,21 +91,22 @@ class ResultReadsTest extends TestCase
             'status' => EnrollmentStatus::Active,
         ]);
 
-        // One exam per (session, class, type); reused across students.
+        // One exam per (session, type), covering this class; reused across students.
         $exam = Exam::firstOrCreate(
             [
                 'session_id' => $this->session->id,
-                'class_id' => $this->class->id,
                 'type' => ExamType::FirstSemester,
             ],
             [
                 'branch_id' => $this->branch->id,
                 'name' => 'First Semester 2026',
+                'all_classes' => false,
                 'start_date' => '2026-04-01',
                 'end_date' => '2026-04-10',
                 'status' => $published ? ExamStatus::Published : ExamStatus::Completed,
             ],
         );
+        $exam->classes()->syncWithoutDetaching([$this->class->id]);
 
         Mark::factory()->create([
             'exam_id' => $exam->id,

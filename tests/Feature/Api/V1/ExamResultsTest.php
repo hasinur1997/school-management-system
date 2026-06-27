@@ -59,10 +59,8 @@ class ExamResultsTest extends TestCase
             ]);
         }
 
-        $this->exam = Exam::factory()->create([
-            'branch_id' => $this->branch->id,
+        $this->exam = Exam::factory()->forClass($this->class)->create([
             'session_id' => $this->session->id,
-            'class_id' => $this->class->id,
             'type' => ExamType::FirstSemester,
             'status' => ExamStatus::Completed,
         ]);
@@ -123,13 +121,33 @@ class ExamResultsTest extends TestCase
         $this->mark($enrollment, 'Science', 65, 'A-', 3.50);
     }
 
+    public function test_deleting_exam_cascades_marks_and_results(): void
+    {
+        $enrollment = $this->enroll(1);
+        $this->fullPassingMarks($enrollment);
+        $this->withToken($this->staffToken())
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/results/generate")
+            ->assertOk();
+
+        $this->assertDatabaseHas('marks', ['exam_id' => $this->exam->id]);
+        $this->assertDatabaseHas('exam_results', ['exam_id' => $this->exam->id]);
+
+        $this->withToken($this->staffToken())
+            ->deleteJson("/api/v1/exams/{$this->exam->public_id}")
+            ->assertOk();
+
+        $this->assertDatabaseMissing('exams', ['id' => $this->exam->id]);
+        $this->assertDatabaseMissing('marks', ['exam_id' => $this->exam->id]);
+        $this->assertDatabaseMissing('exam_results', ['exam_id' => $this->exam->id]);
+    }
+
     public function test_generate_computes_gpa_rounding_and_grade(): void
     {
         $enrollment = $this->enroll(1);
         $this->fullPassingMarks($enrollment);
 
         $this->withToken($this->staffToken())
-            ->postJson("/api/v1/exams/{$this->exam->id}/results/generate")
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/results/generate")
             ->assertOk()
             ->assertJsonPath('message', 'Results generated')
             ->assertJsonPath('data.generated', 1)
@@ -157,7 +175,7 @@ class ExamResultsTest extends TestCase
         $this->mark($enrollment, 'Science', 20, 'F', 0.00);
 
         $this->withToken($this->staffToken())
-            ->postJson("/api/v1/exams/{$this->exam->id}/results/generate")
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/results/generate")
             ->assertOk()
             ->assertJsonPath('data.generated', 1);
 
@@ -182,7 +200,7 @@ class ExamResultsTest extends TestCase
         // Science missing.
 
         $this->withToken($this->staffToken())
-            ->postJson("/api/v1/exams/{$this->exam->id}/results/generate")
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/results/generate")
             ->assertOk()
             ->assertJsonPath('data.generated', 1)
             ->assertJsonPath('data.skipped.0.enrollment_id', $partial->id)
@@ -197,7 +215,7 @@ class ExamResultsTest extends TestCase
         $this->enroll(1);
 
         $this->withToken($this->staffToken())
-            ->postJson("/api/v1/exams/{$this->exam->id}/results/generate")
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/results/generate")
             ->assertStatus(422)
             ->assertJsonPath('message', 'No marks entered for this exam');
     }
@@ -210,7 +228,7 @@ class ExamResultsTest extends TestCase
         $token = $this->staffToken();
 
         $this->withToken($token)
-            ->postJson("/api/v1/exams/{$this->exam->id}/results/generate")
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/results/generate")
             ->assertOk();
 
         $this->assertDatabaseHas('exam_results', ['enrollment_id' => $enrollment->id, 'gpa' => 4.13]);
@@ -222,7 +240,7 @@ class ExamResultsTest extends TestCase
             ->update(['obtained_marks' => 35, 'grade' => 'D', 'grade_point' => 1.00]);
 
         $this->withToken($token)
-            ->postJson("/api/v1/exams/{$this->exam->id}/results/generate")
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/results/generate")
             ->assertOk()
             ->assertJsonPath('data.generated', 1);
 
@@ -237,7 +255,7 @@ class ExamResultsTest extends TestCase
 
         // Publish freezes the rows and the exam.
         $this->withToken($token)
-            ->postJson("/api/v1/exams/{$this->exam->id}/results/publish")
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/results/publish")
             ->assertOk()
             ->assertJsonPath('data.published', 1);
 
@@ -246,12 +264,12 @@ class ExamResultsTest extends TestCase
 
         // Regenerate after publish → 409.
         $this->withToken($token)
-            ->postJson("/api/v1/exams/{$this->exam->id}/results/generate")
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/results/generate")
             ->assertStatus(409);
 
         // Re-publish → 409.
         $this->withToken($token)
-            ->postJson("/api/v1/exams/{$this->exam->id}/results/publish")
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/results/publish")
             ->assertStatus(409);
     }
 
@@ -273,26 +291,26 @@ class ExamResultsTest extends TestCase
         $token = $this->staffToken();
 
         $this->withToken($token)
-            ->postJson("/api/v1/exams/{$this->exam->id}/results/generate")
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/results/generate")
             ->assertOk()
             ->assertJsonPath('data.generated', 3);
 
         // Ordered by GPA desc: passing (4.13) before failing (3.75) within section A.
         $this->withToken($token)
-            ->getJson("/api/v1/exams/{$this->exam->id}/results?section_id={$this->section->id}")
+            ->getJson("/api/v1/exams/{$this->exam->public_id}/results?section_id={$this->section->id}")
             ->assertOk()
             ->assertJsonCount(2, 'data')
-            ->assertJsonPath('data.0.enrollment_id', $top->id)
+            ->assertJsonPath('data.0.enrollment_id', $top->public_id)
             ->assertJsonPath('data.0.gpa', '4.13')
             ->assertJsonPath('data.0.total_marks', '297.00')
-            ->assertJsonPath('data.1.enrollment_id', $failing->id);
+            ->assertJsonPath('data.1.enrollment_id', $failing->public_id);
 
         // is_passed filter narrows to the failing row.
         $this->withToken($token)
-            ->getJson("/api/v1/exams/{$this->exam->id}/results?section_id={$this->section->id}&is_passed=0")
+            ->getJson("/api/v1/exams/{$this->exam->public_id}/results?section_id={$this->section->id}&is_passed=0")
             ->assertOk()
             ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.enrollment_id', $failing->id)
+            ->assertJsonPath('data.0.enrollment_id', $failing->public_id)
             ->assertJsonPath('data.0.is_passed', false);
     }
 
@@ -305,7 +323,7 @@ class ExamResultsTest extends TestCase
         $token = $user->createToken('web')->plainTextToken;
 
         $this->withToken($token)
-            ->postJson("/api/v1/exams/{$this->exam->id}/results/generate")
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/results/generate")
             ->assertStatus(403);
     }
 
@@ -313,17 +331,15 @@ class ExamResultsTest extends TestCase
     {
         $otherBranch = Branch::factory()->create();
         $otherClass = SchoolClass::factory()->create(['branch_id' => $otherBranch->id]);
-        $otherExam = Exam::factory()->create([
-            'branch_id' => $otherBranch->id,
+        $otherExam = Exam::factory()->forClass($otherClass)->create([
             'session_id' => $this->session->id,
-            'class_id' => $otherClass->id,
         ]);
 
         $user = User::factory()->create(['branch_id' => $this->branch->id])->assignRole('admin');
         $token = $user->createToken('web')->plainTextToken;
 
         $this->withToken($token)
-            ->getJson("/api/v1/exams/{$otherExam->id}/results")
+            ->getJson("/api/v1/exams/{$otherExam->public_id}/results")
             ->assertStatus(404);
     }
 }

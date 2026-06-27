@@ -50,10 +50,8 @@ class AnnualResultsTest extends TestCase
         $this->section = Section::factory()->create(['class_id' => $this->class->id, 'name' => 'A']);
 
         foreach (ExamType::cases() as $type) {
-            $this->exams[$type->value] = Exam::factory()->create([
-                'branch_id' => $this->branch->id,
+            $this->exams[$type->value] = Exam::factory()->forClass($this->class)->create([
                 'session_id' => $this->session->id,
-                'class_id' => $this->class->id,
                 'type' => $type,
                 'status' => ExamStatus::Published,
             ]);

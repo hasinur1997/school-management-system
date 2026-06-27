@@ -48,11 +48,18 @@ class ResultService
 
         abort_if($marksByEnrollment->isEmpty(), 422, 'No marks entered for this exam');
 
-        /** @var Collection<int, Subject> $subjects */
-        $subjects = Subject::query()->where('class_id', $exam->class_id)->get();
+        // An exam covers a set of classes (or all of its branch); each
+        // enrollment is graded against the subjects of its own class.
+        $classIds = $exam->classIds();
+
+        /** @var Collection<int|string, Collection<int, Subject>> $subjectsByClass */
+        $subjectsByClass = Subject::query()
+            ->whereIn('class_id', $classIds)
+            ->get()
+            ->groupBy('class_id');
 
         $enrollments = Enrollment::query()
-            ->where('class_id', $exam->class_id)
+            ->whereIn('class_id', $classIds)
             ->where('session_id', $exam->session_id)
             ->where('status', EnrollmentStatus::Active)
             ->get();
@@ -70,6 +77,9 @@ class ResultService
             /** @var Collection<int, Mark> $marks */
             $marks = $marksByEnrollment->get($enrollment->id) ?? collect();
             $markedSubjectIds = $marks->pluck('subject_id')->all();
+
+            /** @var Collection<int, Subject> $subjects */
+            $subjects = $subjectsByClass->get($enrollment->class_id) ?? collect();
 
             $missing = $subjects
                 ->reject(fn (Subject $subject): bool => in_array($subject->id, $markedSubjectIds, true))

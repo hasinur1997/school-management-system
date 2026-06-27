@@ -11,10 +11,12 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 /**
- * Validates exam creation. The class must exist within the caller's branch
- * (checked through the branch-scoped model so out-of-branch ids report 422
- * rather than leak); the (session, class, type) tuple must be unique. The
- * exam's branch_id is derived from the resolved class in the service.
+ * Validates exam creation. An exam targets either an explicit list of classes
+ * (`class_ids`, each existing within the caller's branch) or every class in a
+ * branch (`all_classes`). For a given (session, type), no class may already be
+ * covered by another exam — the overlap is rejected (422). The exam's branch is
+ * derived from the targeted classes (or, for an `all_classes` exam, the
+ * caller's / the super-admin-supplied branch) in the service.
  */
 class StoreExamRequest extends FormRequest
 {
@@ -28,14 +30,27 @@ class StoreExamRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        $rules = [
             'session_id' => ['required', 'integer', 'exists:academic_sessions,id'],
-            'class_id' => ['required', 'integer'],
             'type' => ['required', Rule::enum(ExamType::class)],
             'name' => ['required', 'string', 'max:100'],
+            'all_classes' => ['sometimes', 'boolean'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
         ];
+
+        if ($this->boolean('all_classes')) {
+            // An all-classes exam has no class list to derive the branch from, so
+            // a super admin (who carries no branch) must name one explicitly.
+            if ($this->user()?->isSuperAdmin()) {
+                $rules['branch_id'] = ['required', 'integer', 'exists:branches,id'];
+            }
+        } else {
+            $rules['class_ids'] = ['required', 'array', 'min:1'];
+            $rules['class_ids.*'] = ['integer'];
+        }
+
+        return $rules;
     }
 
     /**
@@ -47,26 +62,68 @@ class StoreExamRequest extends FormRequest
             function (Validator $validator): void {
                 $errors = $validator->errors();
 
-                // Class must exist within the caller's branch. Skip when class_id
-                // or type already failed format validation.
-                if ($errors->has('class_id') || $errors->has('type') || $errors->has('session_id')) {
+                if ($errors->hasAny(['session_id', 'type', 'class_ids', 'all_classes', 'branch_id'])) {
                     return;
                 }
 
-                if (SchoolClass::find($this->integer('class_id')) === null) {
-                    $errors->add('class_id', 'The selected class is invalid.');
+                $all = $this->boolean('all_classes');
+                $field = $all ? 'all_classes' : 'class_ids';
 
-                    return;
+                // Resolve the target classes (branch-scoped — out-of-branch ids
+                // are model-not-found) and the branch they belong to.
+                if ($all) {
+                    $branchId = $this->user()?->isSuperAdmin()
+                        ? $this->integer('branch_id')
+                        : $this->user()?->branch_id;
+
+                    if ($branchId === null) {
+                        $errors->add($field, 'A branch is required for an all-classes exam.');
+
+                        return;
+                    }
+
+                    $targetIds = SchoolClass::query()->where('branch_id', $branchId)->pluck('id')->all();
+
+                    if ($targetIds === []) {
+                        $errors->add($field, 'The selected branch has no classes.');
+
+                        return;
+                    }
+                } else {
+                    /** @var list<int> $ids */
+                    $ids = $this->input('class_ids');
+                    $classes = SchoolClass::query()->whereIn('id', $ids)->get();
+
+                    if ($classes->count() !== count(array_unique($ids))) {
+                        $errors->add('class_ids', 'One or more selected classes are invalid.');
+
+                        return;
+                    }
+
+                    if ($classes->pluck('branch_id')->unique()->count() > 1) {
+                        $errors->add('class_ids', 'All classes must belong to the same branch.');
+
+                        return;
+                    }
+
+                    $targetIds = $classes->pluck('id')->all();
                 }
 
-                $duplicate = Exam::query()
+                // No class may already be covered by another exam of this
+                // (session, type). `all_classes` exams resolve to their branch's
+                // full class set for the overlap test.
+                $existing = Exam::query()
                     ->where('session_id', $this->integer('session_id'))
-                    ->where('class_id', $this->integer('class_id'))
                     ->where('type', $this->input('type'))
-                    ->exists();
+                    ->with('classes')
+                    ->get();
 
-                if ($duplicate) {
-                    $errors->add('type', 'This exam already exists for the class');
+                foreach ($existing as $exam) {
+                    if (array_intersect($targetIds, $exam->classIds()) !== []) {
+                        $errors->add($field, 'An exam of this type already exists for one or more of the selected classes in this session.');
+
+                        return;
+                    }
                 }
             },
         ];

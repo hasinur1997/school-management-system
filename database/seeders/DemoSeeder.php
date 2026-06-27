@@ -305,16 +305,18 @@ class DemoSeeder extends Seeder
         // Three exams, full marks for every subject, then results + annual.
         $exams = [];
         foreach (ExamType::cases() as $type) {
-            $exams[] = Exam::create([
+            $exam = Exam::create([
                 'branch_id' => $branch->id,
                 'session_id' => $session2025->id,
-                'class_id' => $class1->id,
                 'type' => $type,
                 'name' => $this->examName($type).' 2025',
+                'all_classes' => false,
                 'start_date' => '2025-'.sprintf('%02d', count($exams) * 4 + 4).'-01',
                 'end_date' => '2025-'.sprintf('%02d', count($exams) * 4 + 4).'-10',
                 'status' => ExamStatus::Completed,
             ]);
+            $exam->classes()->sync([$class1->id]);
+            $exams[] = $exam;
         }
 
         $enrollments = Enrollment::query()

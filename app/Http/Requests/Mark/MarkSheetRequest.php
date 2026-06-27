@@ -34,9 +34,10 @@ class MarkSheetRequest extends FormRequest
     }
 
     /**
-     * Verify the subject and section both belong to the exam's class. The exam
-     * is already branch-scoped by route-model binding, and the subject/section
-     * lookups carry the branch scope, so foreign ids surface as 422 errors.
+     * Verify the section belongs to one of the exam's classes and the subject
+     * belongs to that same class. The exam is already branch-scoped by
+     * route-model binding, and the subject/section lookups carry the branch
+     * scope, so foreign ids surface as 422 errors.
      *
      * @return array<int, callable>
      */
@@ -49,17 +50,20 @@ class MarkSheetRequest extends FormRequest
 
             /** @var Exam $exam */
             $exam = $this->route('exam');
-
-            $subject = Subject::find($this->integer('subject_id'));
-
-            if ($subject === null || $subject->class_id !== $exam->class_id) {
-                $validator->errors()->add('subject_id', 'The selected subject is not of this exam\'s class.');
-            }
+            $examClassIds = $exam->classIds();
 
             $section = Section::find($this->integer('section_id'));
 
-            if ($section === null || $section->class_id !== $exam->class_id) {
-                $validator->errors()->add('section_id', 'The selected section is not of this exam\'s class.');
+            if ($section === null || ! in_array($section->class_id, $examClassIds, true)) {
+                $validator->errors()->add('section_id', 'The selected section is not of this exam\'s classes.');
+
+                return;
+            }
+
+            $subject = Subject::find($this->integer('subject_id'));
+
+            if ($subject === null || $subject->class_id !== $section->class_id) {
+                $validator->errors()->add('subject_id', 'The selected subject is not of this section\'s class.');
             }
         }];
     }

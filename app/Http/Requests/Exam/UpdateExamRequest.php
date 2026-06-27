@@ -11,10 +11,10 @@ use Illuminate\Validation\Validator;
 
 /**
  * Validates an exam update. Only name/dates/status are editable —
- * session/class/type are immutable (prohibited → 422). A published exam is
- * frozen (→ 409), and the status may never regress to an earlier lifecycle
- * stage (→ 422). Publishing itself is a separate flow (Task 8.1), so the
- * generic update cannot set status to `published`.
+ * session/class/type are immutable (prohibited → 422). Every exam (including
+ * published ones) may have its name/dates edited. The status may never regress
+ * to an earlier lifecycle stage (→ 422), and publishing itself is a separate
+ * flow (Task 8.1), so the generic update cannot set status to `published`.
  */
 class UpdateExamRequest extends FormRequest
 {
@@ -38,6 +38,8 @@ class UpdateExamRequest extends FormRequest
             // Identity columns are immutable.
             'session_id' => ['prohibited'],
             'class_id' => ['prohibited'],
+            'class_ids' => ['prohibited'],
+            'all_classes' => ['prohibited'],
             'type' => ['prohibited'],
         ];
     }
@@ -51,13 +53,6 @@ class UpdateExamRequest extends FormRequest
             function (Validator $validator): void {
                 /** @var Exam $exam */
                 $exam = $this->route('exam');
-
-                // A published exam is frozen — this is a conflict (409), not a
-                // validation error, and must short-circuit the status checks
-                // below (whose comparison would otherwise read as a regression).
-                if ($exam->status === ExamStatus::Published) {
-                    abort(409, 'Published exams cannot be modified');
-                }
 
                 if ($validator->errors()->has('status') || ! $this->filled('status')) {
                     return;

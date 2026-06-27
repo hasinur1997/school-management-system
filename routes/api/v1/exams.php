@@ -18,7 +18,16 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middleware('permission:exam.manage')
         ->name('exams.store');
 
+    // Bulk delete (declared before the {exam} routes so the literal path wins).
+    Route::post('exams/bulk-delete', [ExamController::class, 'bulkDestroy'])
+        ->middleware('permission:exam.manage')
+        ->name('exams.bulk-destroy');
+
     Route::put('exams/{exam}', [ExamController::class, 'update'])
         ->middleware('permission:exam.manage')
         ->name('exams.update');
+
+    Route::delete('exams/{exam}', [ExamController::class, 'destroy'])
+        ->middleware('permission:exam.manage')
+        ->name('exams.destroy');
 });

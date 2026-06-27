@@ -51,6 +51,16 @@ class ResolvePublicIds
         'user_id' => User::class,
     ];
 
+    /**
+     * Plural keys whose value is a list of public ids — each element is
+     * resolved to its internal id (e.g. `class_ids => [hash, hash]`).
+     *
+     * @var array<string, class-string<Model>>
+     */
+    private array $arrayModels = [
+        'class_ids' => SchoolClass::class,
+    ];
+
     public function handle(Request $request, Closure $next): Response
     {
         $request->query->replace($this->resolve($request->query->all()));
@@ -67,24 +77,40 @@ class ResolvePublicIds
     {
         foreach ($payload as $key => $value) {
             if (is_array($value)) {
-                $payload[$key] = $this->resolve($value);
+                // A plural key (`class_ids`) carries a list of public ids; map
+                // each element to its internal id. Otherwise recurse so nested
+                // payloads (e.g. `marks[]`) still resolve their scalar keys.
+                $payload[$key] = isset($this->arrayModels[$key])
+                    ? array_map(fn ($item) => $this->resolveOne($this->arrayModels[$key], $item), $value)
+                    : $this->resolve($value);
 
                 continue;
             }
 
-            if (! is_string($value) || ctype_digit($value) || ! isset($this->models[$key])) {
+            if (! isset($this->models[$key])) {
                 continue;
             }
 
-            $id = $this->models[$key]::query()
-                ->where('public_id', $value)
-                ->value('id');
-
-            if ($id !== null) {
-                $payload[$key] = $id;
-            }
+            $payload[$key] = $this->resolveOne($this->models[$key], $value);
         }
 
         return $payload;
+    }
+
+    /**
+     * Translate a single public id to its internal id, leaving non-string,
+     * already-numeric, or unresolvable values untouched.
+     *
+     * @param  class-string<Model>  $model
+     */
+    private function resolveOne(string $model, mixed $value): mixed
+    {
+        if (! is_string($value) || ctype_digit($value)) {
+            return $value;
+        }
+
+        $id = $model::query()->where('public_id', $value)->value('id');
+
+        return $id ?? $value;
     }
 }

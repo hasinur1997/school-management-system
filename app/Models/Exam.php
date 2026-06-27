@@ -6,18 +6,21 @@ use App\Enums\ExamStatus;
 use App\Enums\ExamType;
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasPublicId;
+use App\Models\Scopes\BranchScope;
 use Database\Factories\ExamFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
- * An exam held for one class in one session. Branch is stamped/scoped
- * automatically via BelongsToBranch; the (session, class, type) tuple is
- * unique. Status only moves forward through the ExamStatus lifecycle.
+ * An exam held for one session and a set of classes. An exam targets either an
+ * explicit list of classes (the exam_class pivot) or, when `all_classes` is
+ * true, every class in its branch. Branch is stamped/scoped automatically via
+ * BelongsToBranch; status only moves forward through the ExamStatus lifecycle.
  */
-#[Fillable(['branch_id', 'session_id', 'class_id', 'type', 'name', 'start_date', 'end_date', 'status'])]
+#[Fillable(['branch_id', 'session_id', 'type', 'name', 'all_classes', 'start_date', 'end_date', 'status'])]
 class Exam extends Model
 {
     /** @use HasFactory<ExamFactory> */
@@ -30,6 +33,7 @@ class Exam extends Model
      */
     protected $attributes = [
         'status' => ExamStatus::Upcoming->value,
+        'all_classes' => false,
     ];
 
     /**
@@ -42,6 +46,7 @@ class Exam extends Model
         return [
             'type' => ExamType::class,
             'status' => ExamStatus::class,
+            'all_classes' => 'boolean',
             'start_date' => 'date',
             'end_date' => 'date',
         ];
@@ -56,10 +61,31 @@ class Exam extends Model
     }
 
     /**
-     * The class this exam is held for.
+     * The classes this exam is held for. Empty when `all_classes` is true —
+     * resolve the effective set via {@see classIds()} instead.
      */
-    public function schoolClass(): BelongsTo
+    public function classes(): BelongsToMany
     {
-        return $this->belongsTo(SchoolClass::class, 'class_id');
+        return $this->belongsToMany(SchoolClass::class, 'exam_class', 'exam_id', 'class_id');
+    }
+
+    /**
+     * The effective set of class ids this exam covers: the branch's classes when
+     * `all_classes` is set, otherwise the explicitly attached classes. Used by
+     * the marks and result engines, which operate per class.
+     *
+     * @return list<int>
+     */
+    public function classIds(): array
+    {
+        if ($this->all_classes) {
+            return SchoolClass::query()
+                ->withoutGlobalScope(BranchScope::class)
+                ->where('branch_id', $this->branch_id)
+                ->pluck('id')
+                ->all();
+        }
+
+        return $this->classes()->pluck('school_classes.id')->all();
     }
 }

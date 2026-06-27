@@ -58,10 +58,8 @@ class MarksEntryTest extends TestCase
             'full_marks' => 100,
             'pass_marks' => 33,
         ]);
-        $this->exam = Exam::factory()->create([
-            'branch_id' => $this->branch->id,
+        $this->exam = Exam::factory()->forClass($this->class)->create([
             'session_id' => $this->session->id,
-            'class_id' => $this->class->id,
             'type' => ExamType::FirstSemester,
         ]);
     }
@@ -120,14 +118,14 @@ class MarksEntryTest extends TestCase
         ]);
 
         $this->withToken($this->superAdminToken())
-            ->getJson("/api/v1/exams/{$this->exam->id}/marks/sheet?subject_id={$this->subject->id}&section_id={$this->section->id}")
+            ->getJson("/api/v1/exams/{$this->exam->public_id}/marks/sheet?subject_id={$this->subject->id}&section_id={$this->section->id}")
             ->assertOk()
             ->assertJsonPath('data.subject.full_marks', 100)
             ->assertJsonPath('data.subject.pass_marks', 33)
             ->assertJsonCount(2, 'data.students')
-            ->assertJsonPath('data.students.0.enrollment_id', $a->id)
+            ->assertJsonPath('data.students.0.enrollment_id', $a->public_id)
             ->assertJsonPath('data.students.0.obtained_marks', 78.5)
-            ->assertJsonPath('data.students.1.enrollment_id', $b->id)
+            ->assertJsonPath('data.students.1.enrollment_id', $b->public_id)
             ->assertJsonPath('data.students.1.obtained_marks', null);
     }
 
@@ -139,7 +137,7 @@ class MarksEntryTest extends TestCase
         DB::connection()->enableQueryLog();
 
         $this->withToken($this->superAdminToken())
-            ->postJson("/api/v1/exams/{$this->exam->id}/marks", [
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/marks", [
                 'subject_id' => $this->subject->id,
                 'marks' => [
                     ['enrollment_id' => $a->id, 'obtained_marks' => 78.5],
@@ -169,7 +167,7 @@ class MarksEntryTest extends TestCase
 
         // Re-post the same exam+subject with a changed mark — updates, no dupes.
         $this->withToken($this->superAdminToken())
-            ->postJson("/api/v1/exams/{$this->exam->id}/marks", [
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/marks", [
                 'subject_id' => $this->subject->id,
                 'marks' => [
                     ['enrollment_id' => $a->id, 'obtained_marks' => 55],
@@ -190,7 +188,7 @@ class MarksEntryTest extends TestCase
         $a = $this->enroll(1);
 
         $this->withToken($this->superAdminToken())
-            ->postJson("/api/v1/exams/{$this->exam->id}/marks", [
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/marks", [
                 'subject_id' => $this->subject->id,
                 'marks' => [['enrollment_id' => $a->id, 'obtained_marks' => 78.5]],
             ])
@@ -220,7 +218,7 @@ class MarksEntryTest extends TestCase
         [, $teacherToken] = $this->teacherToken();
 
         $this->withToken($teacherToken)
-            ->postJson("/api/v1/exams/{$this->exam->id}/marks", [
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/marks", [
                 'subject_id' => $this->subject->id,
                 'marks' => [['enrollment_id' => $a->id, 'obtained_marks' => 78.5]],
             ])
@@ -232,7 +230,7 @@ class MarksEntryTest extends TestCase
         $this->app['auth']->forgetGuards();
 
         $this->withToken($this->superAdminToken())
-            ->postJson("/api/v1/exams/{$this->exam->id}/marks", [
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/marks", [
                 'subject_id' => $this->subject->id,
                 'marks' => [['enrollment_id' => $a->id, 'obtained_marks' => 78.5]],
             ])
@@ -254,7 +252,7 @@ class MarksEntryTest extends TestCase
         ]);
 
         $this->withToken($teacherToken)
-            ->postJson("/api/v1/exams/{$this->exam->id}/marks", [
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/marks", [
                 'subject_id' => $this->subject->id,
                 'marks' => [['enrollment_id' => $a->id, 'obtained_marks' => 78.5]],
             ])
@@ -265,15 +263,13 @@ class MarksEntryTest extends TestCase
     public function test_published_exam_is_frozen_with_409(): void
     {
         $a = $this->enroll(1);
-        $published = Exam::factory()->published()->create([
-            'branch_id' => $this->branch->id,
+        $published = Exam::factory()->forClass($this->class)->published()->create([
             'session_id' => $this->session->id,
-            'class_id' => $this->class->id,
             'type' => ExamType::Final,
         ]);
 
         $this->withToken($this->superAdminToken())
-            ->postJson("/api/v1/exams/{$published->id}/marks", [
+            ->postJson("/api/v1/exams/{$published->public_id}/marks", [
                 'subject_id' => $this->subject->id,
                 'marks' => [['enrollment_id' => $a->id, 'obtained_marks' => 78.5]],
             ])
@@ -290,7 +286,7 @@ class MarksEntryTest extends TestCase
         $b = $this->enroll(2);
 
         $this->withToken($this->superAdminToken())
-            ->postJson("/api/v1/exams/{$this->exam->id}/marks", [
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/marks", [
                 'subject_id' => $this->subject->id,
                 'marks' => [
                     ['enrollment_id' => $a->id, 'obtained_marks' => 78.5],
@@ -308,7 +304,7 @@ class MarksEntryTest extends TestCase
         $foreignSubject = Subject::factory()->create(['class_id' => $otherClass->id]);
 
         $this->withToken($this->superAdminToken())
-            ->postJson("/api/v1/exams/{$this->exam->id}/marks", [
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/marks", [
                 'subject_id' => $foreignSubject->id,
                 'marks' => [['enrollment_id' => $a->id, 'obtained_marks' => 78.5]],
             ])
@@ -322,7 +318,7 @@ class MarksEntryTest extends TestCase
         $tc = $this->enroll(2, status: EnrollmentStatus::Tc);
 
         $this->withToken($this->superAdminToken())
-            ->postJson("/api/v1/exams/{$this->exam->id}/marks", [
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/marks", [
                 'subject_id' => $this->subject->id,
                 'marks' => [
                     ['enrollment_id' => $active->id, 'obtained_marks' => 78.5],
@@ -347,7 +343,7 @@ class MarksEntryTest extends TestCase
         ]);
 
         $this->withToken($this->superAdminToken())
-            ->getJson("/api/v1/exams/{$this->exam->id}/marks?subject_id={$this->subject->id}")
+            ->getJson("/api/v1/exams/{$this->exam->public_id}/marks?subject_id={$this->subject->id}")
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.grade', 'A')
@@ -364,7 +360,7 @@ class MarksEntryTest extends TestCase
         $token = $admin->createToken('web')->plainTextToken;
 
         $this->withToken($token)
-            ->postJson("/api/v1/exams/{$this->exam->id}/marks", [
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/marks", [
                 'subject_id' => $this->subject->id,
                 'marks' => [['enrollment_id' => $a->id, 'obtained_marks' => 78.5]],
             ])
@@ -375,14 +371,12 @@ class MarksEntryTest extends TestCase
     {
         $otherBranch = Branch::factory()->create();
         $otherClass = SchoolClass::factory()->create(['branch_id' => $otherBranch->id]);
-        $otherExam = Exam::factory()->create([
-            'branch_id' => $otherBranch->id,
+        $otherExam = Exam::factory()->forClass($otherClass)->create([
             'session_id' => $this->session->id,
-            'class_id' => $otherClass->id,
         ]);
 
         $this->withToken($this->superAdminToken())
-            ->getJson("/api/v1/exams/{$otherExam->id}/marks?subject_id={$this->subject->id}")
+            ->getJson("/api/v1/exams/{$otherExam->public_id}/marks?subject_id={$this->subject->id}")
             ->assertOk();
 
         // A non-super-admin in this branch cannot see the other branch's exam.
@@ -392,7 +386,7 @@ class MarksEntryTest extends TestCase
         $this->app['auth']->forgetGuards();
 
         $this->withToken($teacherToken)
-            ->getJson("/api/v1/exams/{$otherExam->id}/marks?subject_id={$this->subject->id}")
+            ->getJson("/api/v1/exams/{$otherExam->public_id}/marks?subject_id={$this->subject->id}")
             ->assertStatus(404);
     }
 }

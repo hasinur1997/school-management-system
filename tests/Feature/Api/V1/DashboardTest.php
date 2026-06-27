@@ -223,10 +223,8 @@ class DashboardTest extends TestCase
             'status' => InvoiceStatus::Unpaid,
         ]);
 
-        $exam = Exam::factory()->create([
-            'branch_id' => $this->branch->id,
+        $exam = Exam::factory()->forClass($this->class)->create([
             'session_id' => $this->session->id,
-            'class_id' => $this->class->id,
             'name' => 'Final 2026',
         ]);
         ExamResult::factory()->published()->create([

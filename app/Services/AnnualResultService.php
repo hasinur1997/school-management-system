@@ -127,9 +127,11 @@ class AnnualResultService
     }
 
     /**
-     * The three exams for the (session, class) tuple, keyed by type. Always
-     * resolved through the branch-scoped Exam model so out-of-branch tuples
-     * yield an empty set (and thus the published guard fails).
+     * The three exams covering the (session, class) tuple, keyed by type. An
+     * exam covers the class either explicitly (the exam_class pivot) or via
+     * `all_classes`. Always resolved through the branch-scoped Exam model so
+     * out-of-branch tuples yield an empty set (and thus the published guard
+     * fails).
      *
      * @return array<string, Exam>
      */
@@ -137,7 +139,10 @@ class AnnualResultService
     {
         return Exam::query()
             ->where('session_id', $sessionId)
-            ->where('class_id', $classId)
+            ->where(function ($query) use ($classId): void {
+                $query->whereHas('classes', fn ($c) => $c->where('school_classes.id', $classId))
+                    ->orWhere('all_classes', true);
+            })
             ->get()
             ->keyBy(fn (Exam $exam): string => $exam->type->value)
             ->all();

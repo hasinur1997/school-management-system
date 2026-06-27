@@ -24,8 +24,9 @@ return new class extends Migration
             $table->string('status', 20)->default(ExamStatus::Upcoming->value);
             $table->timestamps();
 
-            // One exam per (session, class, type). class_id is itself bound to a
-            // single branch, so this tuple is effectively branch-scoped.
+            // One exam per (session, class, type). Superseded by the multi-class
+            // model — see the convert_exams_to_multi_class migration, which moves
+            // class_id into the exam_class pivot and adds the all_classes flag.
             $table->unique(['session_id', 'class_id', 'type']);
             $table->index('status');
         });

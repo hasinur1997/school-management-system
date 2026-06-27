@@ -62,14 +62,16 @@ class StoreMarksRequest extends FormRequest
 
             $subject = Subject::find($this->integer('subject_id'));
 
-            if ($subject === null || $subject->class_id !== $exam->class_id) {
-                $validator->errors()->add('subject_id', 'The selected subject is not of this exam\'s class.');
+            // The subject's class must be one the exam covers; marks are then
+            // scoped to that subject's class.
+            if ($subject === null || ! in_array($subject->class_id, $exam->classIds(), true)) {
+                $validator->errors()->add('subject_id', 'The selected subject is not of this exam\'s classes.');
 
                 return;
             }
 
             $activeEnrollmentIds = Enrollment::query()
-                ->where('class_id', $exam->class_id)
+                ->where('class_id', $subject->class_id)
                 ->where('status', EnrollmentStatus::Active)
                 ->pluck('id')
                 ->all();
