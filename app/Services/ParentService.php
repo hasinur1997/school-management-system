@@ -38,6 +38,31 @@ class ParentService
      */
     public function list(array $filters, int $perPage): LengthAwarePaginator
     {
+        return $this->filtered($filters)
+            ->orderByDesc('id')
+            ->paginate($perPage);
+    }
+
+    /**
+     * List soft-deleted parents in the caller's branch.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    public function listTrashed(array $filters, int $perPage): LengthAwarePaginator
+    {
+        return $this->filtered($filters)
+            ->onlyTrashed()
+            ->orderByDesc('deleted_at')
+            ->paginate($perPage);
+    }
+
+    /**
+     * Build the shared parent list query and eager-load the payload relations.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    private function filtered(array $filters): Builder
+    {
         return ParentProfile::query()
             ->with(self::WITH)
             ->when(isset($filters['search']), function (Builder $query) use ($filters): void {
@@ -45,9 +70,7 @@ class ParentService
                 $query->where(fn (Builder $q) => $q
                     ->where('name', 'like', $term)
                     ->orWhere('phone', 'like', $term));
-            })
-            ->orderByDesc('id')
-            ->paginate($perPage);
+            });
     }
 
     /**
@@ -228,6 +251,121 @@ class ParentService
         }
 
         $parent->students()->detach($student->id);
+    }
+
+    /**
+     * Soft delete a parent profile and immediately disable its login.
+     */
+    public function delete(ParentProfile $parent): void
+    {
+        DB::transaction(function () use ($parent): void {
+            $parent->delete();
+
+            $user = $parent->user()->withTrashed()->first();
+
+            if ($user !== null) {
+                $user->update(['is_active' => false]);
+                $user->tokens()->delete();
+            }
+        });
+    }
+
+    /**
+     * Soft delete several parents by public id, resolved branch-scoped.
+     *
+     * @param  list<string>  $publicIds
+     */
+    public function bulkDelete(array $publicIds): int
+    {
+        $parents = ParentProfile::query()
+            ->whereIn('public_id', $publicIds)
+            ->get();
+
+        foreach ($parents as $parent) {
+            $this->delete($parent);
+        }
+
+        return $parents->count();
+    }
+
+    /**
+     * Restore a trashed parent profile and re-enable its login.
+     */
+    public function restore(ParentProfile $parent): ParentProfile
+    {
+        return DB::transaction(function () use ($parent): ParentProfile {
+            $parent->restore();
+
+            $user = $parent->user()->withTrashed()->first();
+
+            if ($user !== null) {
+                $user->update(['is_active' => true]);
+            }
+
+            return $parent;
+        });
+    }
+
+    /**
+     * Restore several trashed parents by public id, resolved branch-scoped.
+     *
+     * @param  list<string>  $publicIds
+     */
+    public function bulkRestore(array $publicIds): int
+    {
+        $parents = ParentProfile::onlyTrashed()
+            ->whereIn('public_id', $publicIds)
+            ->get();
+
+        foreach ($parents as $parent) {
+            $this->restore($parent);
+        }
+
+        return $parents->count();
+    }
+
+    /**
+     * Permanently delete a trashed parent profile and its login. Linked-student
+     * pivot rows cascade from the actual profile delete.
+     */
+    public function forceDelete(ParentProfile $parent): void
+    {
+        abort_unless($parent->trashed(), 409, 'Parent must be in trash before permanent deletion.');
+
+        DB::transaction(function () use ($parent): void {
+            $user = $parent->user()->withTrashed()->first();
+
+            $parent->forceDelete();
+
+            if ($user !== null) {
+                $user->tokens()->delete();
+                $user->syncRoles([]);
+                $user->forceDelete();
+            }
+        });
+    }
+
+    /**
+     * Permanently delete several trashed parents by public id, resolved
+     * branch-scoped. All rows are checked before any deletion occurs.
+     *
+     * @param  list<string>  $publicIds
+     */
+    public function bulkForceDelete(array $publicIds): int
+    {
+        $parents = ParentProfile::onlyTrashed()
+            ->whereIn('public_id', $publicIds)
+            ->get();
+
+        foreach ($parents as $parent) {
+            abort_unless($parent->trashed(), 409, 'Parent must be in trash before permanent deletion.');
+        }
+
+        foreach ($parents as $parent) {
+            $this->forceDelete($parent);
+        }
+
+        return $parents->count();
     }
 
     /**

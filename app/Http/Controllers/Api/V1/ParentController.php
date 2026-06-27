@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\ApiController;
+use App\Http\Requests\Parent\BulkParentsRequest;
 use App\Http\Requests\Parent\LinkStudentRequest;
 use App\Http\Requests\Parent\ListParentsRequest;
 use App\Http\Requests\Parent\StoreParentRequest;
@@ -11,6 +12,7 @@ use App\Http\Resources\ParentResource;
 use App\Models\ParentProfile;
 use App\Models\Student;
 use App\Services\ParentService;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -28,6 +30,27 @@ class ParentController extends ApiController
             $request->integer('per_page', 15),
         );
 
+        return $this->paginated($parents, $request);
+    }
+
+    /**
+     * Display a paginated listing of soft-deleted parents.
+     */
+    public function trash(ListParentsRequest $request): JsonResponse
+    {
+        $parents = $this->parents->listTrashed(
+            $request->only(['search']),
+            $request->integer('per_page', 15),
+        );
+
+        return $this->paginated($parents, $request);
+    }
+
+    /**
+     * Build the standard paginated list envelope for parent collections.
+     */
+    private function paginated(LengthAwarePaginator $parents, Request $request): JsonResponse
+    {
         return response()->json([
             'success' => true,
             'message' => 'OK',
@@ -83,6 +106,66 @@ class ParentController extends ApiController
         $this->parents->resendCredentials($parent);
 
         return $this->success(null, 'New credentials are being sent to the parent.');
+    }
+
+    /**
+     * Soft delete a parent profile and disable the login.
+     */
+    public function destroy(ParentProfile $parent): JsonResponse
+    {
+        $this->parents->delete($parent);
+
+        return $this->success(null, 'Parent moved to trash.');
+    }
+
+    /**
+     * Soft delete several parent profiles by public id.
+     */
+    public function bulkDestroy(BulkParentsRequest $request): JsonResponse
+    {
+        $deleted = $this->parents->bulkDelete($request->validated('ids'));
+
+        return $this->success(['deleted' => $deleted], 'Parents moved to trash.');
+    }
+
+    /**
+     * Restore a trashed parent profile.
+     */
+    public function restore(ParentProfile $parent): JsonResponse
+    {
+        $this->parents->restore($parent);
+
+        return $this->success(null, 'Parent restored.');
+    }
+
+    /**
+     * Restore several trashed parent profiles by public id.
+     */
+    public function bulkRestore(BulkParentsRequest $request): JsonResponse
+    {
+        $restored = $this->parents->bulkRestore($request->validated('ids'));
+
+        return $this->success(['restored' => $restored], 'Parents restored.');
+    }
+
+    /**
+     * Permanently delete a trashed parent profile.
+     */
+    public function forceDestroy(ParentProfile $parent): JsonResponse
+    {
+        $this->parents->forceDelete($parent);
+
+        return $this->success(null, 'Parent permanently deleted.');
+    }
+
+    /**
+     * Permanently delete several trashed parent profiles by public id.
+     */
+    public function bulkForceDestroy(BulkParentsRequest $request): JsonResponse
+    {
+        $deleted = $this->parents->bulkForceDelete($request->validated('ids'));
+
+        return $this->success(['deleted' => $deleted], 'Parents permanently deleted.');
     }
 
     /**

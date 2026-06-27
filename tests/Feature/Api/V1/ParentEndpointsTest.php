@@ -91,14 +91,15 @@ class ParentEndpointsTest extends TestCase
             ->assertJsonPath('data.name', 'Abdul Karim')
             ->assertJsonPath('data.relation', 'father')
             ->assertJsonCount(1, 'data.students')
-            ->assertJsonPath('data.students.0.id', $student->id)
+            ->assertJsonPath('data.students.0.id', $student->public_id)
             ->assertJsonPath('data.students.0.name_en', 'Rahima Khatun')
             ->assertJsonPath('data.students.0.class', 'Class 7')
             ->assertJsonPath('data.students.0.section', 'A');
 
-        $parentId = $response->json('data.id');
+        $parentPublicId = $response->json('data.id');
+        $parentId = ParentProfile::where('public_id', $parentPublicId)->value('id');
 
-        $this->assertDatabaseHas('parents', ['id' => $parentId, 'phone' => '01811111111', 'relation' => 'father']);
+        $this->assertDatabaseHas('parents', ['public_id' => $parentPublicId, 'phone' => '01811111111', 'relation' => 'father']);
         $this->assertDatabaseHas('parent_student', ['parent_id' => $parentId, 'student_id' => $student->id]);
 
         $user = User::where('phone', '01811111111')->firstOrFail();
@@ -165,24 +166,24 @@ class ParentEndpointsTest extends TestCase
 
         // duplicate link → 409
         $this->withToken($token)
-            ->postJson("/api/v1/parents/{$parent->id}/students", ['student_id' => $linked->id])
+            ->postJson("/api/v1/parents/{$parent->public_id}/students", ['student_id' => $linked->id])
             ->assertStatus(409);
 
         // fresh link → ok
         $this->withToken($token)
-            ->postJson("/api/v1/parents/{$parent->id}/students", ['student_id' => $other->id])
+            ->postJson("/api/v1/parents/{$parent->public_id}/students", ['student_id' => $other->id])
             ->assertOk();
         $this->assertDatabaseHas('parent_student', ['parent_id' => $parent->id, 'student_id' => $other->id]);
 
         // unlink a non-linked (but valid, never linked) student → 404
         $never = $this->makeStudent();
         $this->withToken($token)
-            ->deleteJson("/api/v1/parents/{$parent->id}/students/{$never->id}")
+            ->deleteJson("/api/v1/parents/{$parent->public_id}/students/{$never->public_id}")
             ->assertStatus(404);
 
         // unlink a linked student → ok
         $this->withToken($token)
-            ->deleteJson("/api/v1/parents/{$parent->id}/students/{$linked->id}")
+            ->deleteJson("/api/v1/parents/{$parent->public_id}/students/{$linked->public_id}")
             ->assertOk();
         $this->assertDatabaseMissing('parent_student', ['parent_id' => $parent->id, 'student_id' => $linked->id]);
     }
@@ -194,7 +195,7 @@ class ParentEndpointsTest extends TestCase
         $foreign = $this->makeStudent(branch: $otherBranch);
 
         $this->withToken($this->tokenForRole('admin'))
-            ->postJson("/api/v1/parents/{$parent->id}/students", ['student_id' => $foreign->id])
+            ->postJson("/api/v1/parents/{$parent->public_id}/students", ['student_id' => $foreign->id])
             ->assertStatus(422)
             ->assertJsonValidationErrors('student_id');
     }
@@ -224,7 +225,7 @@ class ParentEndpointsTest extends TestCase
             ->getJson('/api/v1/me/students')
             ->assertOk()
             ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.id', $linked->id)
+            ->assertJsonPath('data.0.id', $linked->public_id)
             ->assertJsonPath('data.0.name_en', 'Rahima Khatun')
             ->assertJsonPath('data.0.class', 'Class 7')
             ->assertJsonPath('data.0.section', 'A');
@@ -281,6 +282,151 @@ class ParentEndpointsTest extends TestCase
         $this->withToken($this->tokenForRole('teacher'))
             ->postJson("/api/v1/parents/{$parent->public_id}/resend-credentials")
             ->assertStatus(403);
+    }
+
+    public function test_delete_moves_parent_to_trash_and_disables_login(): void
+    {
+        $parent = $this->makeParent();
+        $parent->update(['name' => 'Trash Guardian']);
+        $student = $this->makeStudent();
+        $parent->students()->attach($student->id);
+
+        $token = $this->tokenForRole('admin');
+
+        $this->withToken($token)
+            ->deleteJson("/api/v1/parents/{$parent->public_id}")
+            ->assertOk()
+            ->assertJsonPath('message', 'Parent moved to trash.');
+
+        $this->assertSoftDeleted('parents', ['id' => $parent->id]);
+        $this->assertDatabaseHas('users', ['id' => $parent->user_id, 'is_active' => false]);
+        $this->assertDatabaseHas('parent_student', ['parent_id' => $parent->id, 'student_id' => $student->id]);
+
+        $this->withToken($token)
+            ->getJson('/api/v1/parents?search=Trash%20Guardian')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+
+        $trash = $this->withToken($token)
+            ->getJson('/api/v1/parents/trash?search=Trash%20Guardian')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $parent->public_id);
+
+        $this->assertNotNull($trash->json('data.0.deleted_at'));
+    }
+
+    public function test_bulk_delete_trashes_many_and_skips_foreign_branch_ids(): void
+    {
+        $a = $this->makeParent();
+        $b = $this->makeParent();
+        $foreign = $this->makeParent(Branch::factory()->create());
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->postJson('/api/v1/parents/bulk-delete', [
+                'ids' => [$a->public_id, $b->public_id, $foreign->public_id],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.deleted', 2);
+
+        $this->assertSoftDeleted('parents', ['id' => $a->id]);
+        $this->assertSoftDeleted('parents', ['id' => $b->id]);
+        $this->assertNotSoftDeleted('parents', ['id' => $foreign->id]);
+    }
+
+    public function test_restore_brings_parent_back_from_trash(): void
+    {
+        $parent = $this->makeParent();
+        $student = $this->makeStudent();
+        $parent->students()->attach($student->id);
+        $parent->delete();
+        $parent->user->update(['is_active' => false]);
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->postJson("/api/v1/parents/{$parent->public_id}/restore")
+            ->assertOk()
+            ->assertJsonPath('message', 'Parent restored.');
+
+        $this->assertNotSoftDeleted('parents', ['id' => $parent->id]);
+        $this->assertDatabaseHas('users', ['id' => $parent->user_id, 'is_active' => true]);
+        $this->assertDatabaseHas('parent_student', ['parent_id' => $parent->id, 'student_id' => $student->id]);
+    }
+
+    public function test_bulk_restore_restores_many_trashed_parents(): void
+    {
+        $a = $this->makeParent();
+        $b = $this->makeParent();
+        $a->delete();
+        $b->delete();
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->postJson('/api/v1/parents/bulk-restore', [
+                'ids' => [$a->public_id, $b->public_id],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.restored', 2);
+
+        $this->assertNotSoftDeleted('parents', ['id' => $a->id]);
+        $this->assertNotSoftDeleted('parents', ['id' => $b->id]);
+    }
+
+    public function test_force_delete_permanently_removes_trashed_parent_login_and_links(): void
+    {
+        $parent = $this->makeParent();
+        $student = $this->makeStudent();
+        $parent->students()->attach($student->id);
+        $userId = $parent->user_id;
+        $parent->delete();
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->deleteJson("/api/v1/parents/{$parent->public_id}/force")
+            ->assertOk()
+            ->assertJsonPath('message', 'Parent permanently deleted.');
+
+        $this->assertDatabaseMissing('parents', ['id' => $parent->id]);
+        $this->assertDatabaseMissing('parent_student', ['parent_id' => $parent->id, 'student_id' => $student->id]);
+        $this->assertDatabaseMissing('users', ['id' => $userId]);
+        $this->assertDatabaseHas('students', ['id' => $student->id]);
+    }
+
+    public function test_force_delete_requires_parent_to_be_trashed_first(): void
+    {
+        $parent = $this->makeParent();
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->deleteJson("/api/v1/parents/{$parent->public_id}/force")
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'Parent must be in trash before permanent deletion.');
+    }
+
+    public function test_bulk_force_delete_permanently_removes_many_trashed_parents(): void
+    {
+        $a = $this->makeParent();
+        $b = $this->makeParent();
+        $a->delete();
+        $b->delete();
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->postJson('/api/v1/parents/bulk-force-delete', [
+                'ids' => [$a->public_id, $b->public_id],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.deleted', 2);
+
+        $this->assertDatabaseMissing('parents', ['id' => $a->id]);
+        $this->assertDatabaseMissing('parents', ['id' => $b->id]);
+    }
+
+    public function test_trash_actions_require_parent_manage_permission(): void
+    {
+        $parent = $this->makeParent();
+        $token = $this->tokenForRole('teacher');
+
+        $this->withToken($token)->getJson('/api/v1/parents/trash')->assertForbidden();
+        $this->withToken($token)->deleteJson("/api/v1/parents/{$parent->public_id}")->assertForbidden();
+        $this->withToken($token)
+            ->postJson('/api/v1/parents/bulk-delete', ['ids' => [$parent->public_id]])
+            ->assertForbidden();
     }
 
     private function makeParent(?Branch $branch = null): ParentProfile

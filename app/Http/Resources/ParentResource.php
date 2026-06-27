@@ -26,6 +26,7 @@ class ParentResource extends JsonResource
             'phone' => $this->phone,
             'email' => $this->user?->email,
             'relation' => $this->relation,
+            'deleted_at' => $this->deleted_at?->toIso8601String(),
             'students' => $this->whenLoaded(
                 'students',
                 fn () => LinkedStudentResource::collection($this->students)->resolve($request),

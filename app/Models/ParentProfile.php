@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * A parent/guardian profile attached one-to-one to a login (users row) and
@@ -21,7 +22,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class ParentProfile extends Model
 {
     /** @use HasFactory<ParentProfileFactory> */
-    use BelongsToBranch, HasFactory, HasPublicId;
+    use BelongsToBranch, HasFactory, HasPublicId, SoftDeletes;
 
     /**
      * The table associated with the model.
