@@ -9,9 +9,11 @@ use Illuminate\Http\Resources\Json\JsonResource;
 /**
  * The compact student shape shared by a parent's linked-students listings
  * (parent payloads and /me/students): identity plus the current
- * class/section drawn from the active (current-session) enrollment. The
- * currentEnrollment + class/section + media must be eager loaded so no lazy
- * loading occurs under strict mode.
+ * class/section/roll drawn from the active (current-session) enrollment. Mirrors
+ * StudentListResource so the parent "Students" table can render the same columns
+ * (admission no, roll, status) as the admin students list. The currentEnrollment
+ * + class/section + media must be eager loaded so no lazy loading occurs under
+ * strict mode.
  *
  * @mixin Student
  */
@@ -26,9 +28,13 @@ class LinkedStudentResource extends JsonResource
 
         return [
             'id' => $this->public_id,
+            'admission_no' => $this->admission_no,
             'name_en' => $this->name_en,
+            'name_bn' => $this->name_bn,
             'class' => $enrollment?->schoolClass?->name,
             'section' => $enrollment?->section?->name,
+            'roll_no' => $enrollment?->roll_no,
+            'status' => $this->status->value,
             'photo_url' => $this->photoUrl(),
         ];
     }
