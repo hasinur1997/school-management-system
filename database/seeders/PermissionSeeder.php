@@ -24,6 +24,7 @@ class PermissionSeeder extends Seeder
         'teacher.update',
         'admission.view',
         'admission.approve',
+        'admission.delete',
         'student.view',
         'student.create',
         'student.update',

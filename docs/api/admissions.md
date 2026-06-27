@@ -8,6 +8,17 @@
 | GET | /admissions/{id} | admission.view | Full application incl. previous education + documents |
 | POST | /admissions/{id}/approve | admission.approve | Convert to student |
 | POST | /admissions/{id}/reject | admission.approve | `{ "rejection_reason": "string" }` |
+| GET | /admissions/trash | admission.delete | Paginated trashed (soft-deleted) applications; filters: desired_class_id, search, from, to |
+| DELETE | /admissions/{id} | admission.delete | Soft delete (move to trash) |
+| POST | /admissions/bulk-delete | admission.delete | `{ "ids": ["public_id", …] }` → `{ "deleted": n }` |
+| POST | /admissions/{id}/restore | admission.delete | Restore from trash |
+| POST | /admissions/bulk-restore | admission.delete | `{ "ids": [...] }` → `{ "restored": n }` |
+| DELETE | /admissions/{id}/force | admission.delete | Permanently delete a trashed application (irreversible) |
+| POST | /admissions/bulk-force-delete | admission.delete | `{ "ids": [...] }` → `{ "deleted": n }` |
+
+## Trash / soft delete
+
+Admission applications are soft-deleted. `DELETE /admissions/{id}` stamps `deleted_at` and removes the row from the live queue (`GET /admissions`) while preserving its previous-education rows and media, so a restore brings it back intact. Trashed rows appear only in `GET /admissions/trash`, where `AdmissionListResource` carries a non-null `deleted_at`. Bulk endpoints take a list of `public_id`s; ids outside the caller's branch (or, for restore/force, ids that are not trashed) are silently skipped and excluded from the returned count. `DELETE /admissions/{id}/force` permanently removes the row — its previous-education children cascade via the FK and its media is deleted — and is irreversible. All trash routes are gated on `admission.delete` and branch-isolated (out-of-branch → 404).
 
 ## POST /public/admissions
 multipart/form-data. Fields mirror `admission_applications` in `database-schema.md` (items 1–12 of the paper form), plus:

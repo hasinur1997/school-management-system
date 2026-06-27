@@ -94,6 +94,37 @@ class AdmissionService
      */
     public function list(array $filters, int $perPage): LengthAwarePaginator
     {
+        return $this->filtered($filters)
+            ->orderByDesc('created_at')
+            ->paginate($perPage);
+    }
+
+    /**
+     * List soft-deleted (trashed) applications in the caller's branch, ordered
+     * by when they were deleted (most recently trashed first). Accepts the same
+     * filters as list() except status — the trash holds applications of every
+     * lifecycle state.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    public function listTrashed(array $filters, int $perPage): LengthAwarePaginator
+    {
+        return $this->filtered($filters)
+            ->onlyTrashed()
+            ->orderByDesc('deleted_at')
+            ->paginate($perPage);
+    }
+
+    /**
+     * Build the shared, branch-scoped admission query with the common filters
+     * (status, desired class, created-date range, free-text search) applied.
+     * The desired class is eager loaded for the compact rows so it never lazy
+     * loads in the Resource.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    private function filtered(array $filters): Builder
+    {
         return AdmissionApplication::query()
             ->with('desiredClass')
             ->when(isset($filters['status']), fn (Builder $query) => $query->where('status', $filters['status']))
@@ -108,9 +139,7 @@ class AdmissionService
                     ->orWhere('application_no', 'like', $term)
                     ->orWhere('father_mobile', 'like', $term)
                     ->orWhere('birth_reg_no', 'like', $term));
-            })
-            ->orderByDesc('created_at')
-            ->paginate($perPage);
+            });
     }
 
     /**
@@ -277,6 +306,119 @@ class AdmissionService
         ]);
 
         return $application;
+    }
+
+    /**
+     * Soft delete an application — moves it to the trash (deleted_at stamped).
+     * Media and previous-education rows are preserved so a restore brings the
+     * record back intact.
+     */
+    public function delete(AdmissionApplication $application): void
+    {
+        $application->delete();
+    }
+
+    /**
+     * Soft delete several applications by public id, resolved branch-scoped (ids
+     * outside the caller's branch resolve to nothing and are skipped). Returns
+     * the count actually deleted.
+     *
+     * @param  list<string>  $publicIds
+     */
+    public function bulkDelete(array $publicIds): int
+    {
+        $applications = AdmissionApplication::query()
+            ->whereIn('public_id', $publicIds)
+            ->get();
+
+        foreach ($applications as $application) {
+            $application->delete();
+        }
+
+        return $applications->count();
+    }
+
+    /**
+     * Restore a soft-deleted application out of the trash.
+     */
+    public function restore(AdmissionApplication $application): AdmissionApplication
+    {
+        $application->restore();
+
+        return $application;
+    }
+
+    /**
+     * Restore several trashed applications by public id, resolved branch-scoped
+     * (only trashed rows are considered; foreign ids are skipped). Returns the
+     * count actually restored.
+     *
+     * @param  list<string>  $publicIds
+     */
+    public function bulkRestore(array $publicIds): int
+    {
+        $applications = AdmissionApplication::onlyTrashed()
+            ->whereIn('public_id', $publicIds)
+            ->get();
+
+        foreach ($applications as $application) {
+            $application->restore();
+        }
+
+        return $applications->count();
+    }
+
+    /**
+     * Permanently delete a trashed application. Irreversible: the row, its
+     * previous-education children (cascaded by the FK), and all its media are
+     * removed for good. Only trashed records that have not produced a student
+     * are force-deletable.
+     */
+    public function forceDelete(AdmissionApplication $application): void
+    {
+        $this->assertForceDeletable($application);
+
+        $application->forceDelete();
+    }
+
+    /**
+     * Permanently delete several trashed applications by public id, resolved
+     * branch-scoped (only trashed rows are considered; foreign ids are skipped).
+     * Returns the count actually deleted.
+     *
+     * @param  list<string>  $publicIds
+     */
+    public function bulkForceDelete(array $publicIds): int
+    {
+        $applications = AdmissionApplication::onlyTrashed()
+            ->whereIn('public_id', $publicIds)
+            ->get();
+
+        foreach ($applications as $application) {
+            $this->assertForceDeletable($application);
+        }
+
+        foreach ($applications as $application) {
+            $application->forceDelete();
+        }
+
+        return $applications->count();
+    }
+
+    /**
+     * Permanent deletion is intentionally narrower than trashing: live
+     * applications must be moved to trash first, and converted applications are
+     * retained because students.application_id uses restrict-on-delete.
+     */
+    private function assertForceDeletable(AdmissionApplication $application): void
+    {
+        abort_unless($application->trashed(), 409, 'Application must be in trash before permanent deletion.');
+
+        abort_if(
+            $application->student()->withTrashed()->exists(),
+            409,
+            'Application has an admitted student and cannot be permanently deleted.',
+        );
     }
 
     /**

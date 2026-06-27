@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\ApiController;
 use App\Http\Requests\Admission\ApproveAdmissionRequest;
+use App\Http\Requests\Admission\BulkAdmissionsRequest;
 use App\Http\Requests\Admission\ListAdmissionsRequest;
 use App\Http\Requests\Admission\RejectAdmissionRequest;
 use App\Http\Resources\AdmissionDetailResource;
@@ -11,7 +12,9 @@ use App\Http\Resources\AdmissionListResource;
 use App\Http\Resources\ApprovedStudentResource;
 use App\Models\AdmissionApplication;
 use App\Services\AdmissionService;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 /**
  * Admin-facing admission review reads. Branch isolation is automatic via
@@ -31,17 +34,22 @@ class AdmissionController extends ApiController
             $request->integer('per_page', 15),
         );
 
-        return response()->json([
-            'success' => true,
-            'message' => 'OK',
-            'data' => AdmissionListResource::collection($applications)->resolve($request),
-            'meta' => [
-                'current_page' => $applications->currentPage(),
-                'per_page' => $applications->perPage(),
-                'total' => $applications->total(),
-                'last_page' => $applications->lastPage(),
-            ],
-        ]);
+        return $this->paginated($applications, $request);
+    }
+
+    /**
+     * Display a paginated, filterable listing of soft-deleted (trashed)
+     * applications. Same filters as index() minus status — the trash holds
+     * applications of every lifecycle state.
+     */
+    public function trash(ListAdmissionsRequest $request): JsonResponse
+    {
+        $applications = $this->admissions->listTrashed(
+            $request->only(['desired_class_id', 'from', 'to', 'search']),
+            $request->integer('per_page', 15),
+        );
+
+        return $this->paginated($applications, $request);
     }
 
     /**
@@ -76,5 +84,88 @@ class AdmissionController extends ApiController
         $this->admissions->reject($admission, $request->validated()['rejection_reason']);
 
         return $this->success(null, 'Application rejected.');
+    }
+
+    /**
+     * Soft delete an application — moves it to the trash.
+     */
+    public function destroy(AdmissionApplication $admission): JsonResponse
+    {
+        $this->admissions->delete($admission);
+
+        return $this->success(null, 'Application moved to trash.');
+    }
+
+    /**
+     * Soft delete several applications by public id (branch-scoped; foreign ids
+     * skipped).
+     */
+    public function bulkDestroy(BulkAdmissionsRequest $request): JsonResponse
+    {
+        $deleted = $this->admissions->bulkDelete($request->validated('ids'));
+
+        return $this->success(['deleted' => $deleted], 'Applications moved to trash.');
+    }
+
+    /**
+     * Restore a soft-deleted application out of the trash. The route binds the
+     * trashed model (withTrashed).
+     */
+    public function restore(AdmissionApplication $admission): JsonResponse
+    {
+        $this->admissions->restore($admission);
+
+        return $this->success(null, 'Application restored.');
+    }
+
+    /**
+     * Restore several trashed applications by public id (branch-scoped; only
+     * trashed rows are considered).
+     */
+    public function bulkRestore(BulkAdmissionsRequest $request): JsonResponse
+    {
+        $restored = $this->admissions->bulkRestore($request->validated('ids'));
+
+        return $this->success(['restored' => $restored], 'Applications restored.');
+    }
+
+    /**
+     * Permanently delete a trashed application. Irreversible. The route binds
+     * the trashed model (withTrashed).
+     */
+    public function forceDestroy(AdmissionApplication $admission): JsonResponse
+    {
+        $this->admissions->forceDelete($admission);
+
+        return $this->success(null, 'Application permanently deleted.');
+    }
+
+    /**
+     * Permanently delete several trashed applications by public id
+     * (branch-scoped; only trashed rows are considered). Irreversible.
+     */
+    public function bulkForceDestroy(BulkAdmissionsRequest $request): JsonResponse
+    {
+        $deleted = $this->admissions->bulkForceDelete($request->validated('ids'));
+
+        return $this->success(['deleted' => $deleted], 'Applications permanently deleted.');
+    }
+
+    /**
+     * Build the standard paginated list envelope for an admission collection.
+     */
+    private function paginated(LengthAwarePaginator $applications, Request $request): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'message' => 'OK',
+            'data' => AdmissionListResource::collection($applications)->resolve($request),
+            'meta' => [
+                'current_page' => $applications->currentPage(),
+                'per_page' => $applications->perPage(),
+                'total' => $applications->total(),
+                'last_page' => $applications->lastPage(),
+            ],
+        ]);
     }
 }

@@ -32,6 +32,8 @@ class AdmissionListResource extends JsonResource
             'father_mobile' => $this->father_mobile,
             'status' => $this->status->value,
             'submitted_at' => $this->created_at?->toIso8601String(),
+            // Null for live rows; the soft-delete timestamp on trashed rows.
+            'deleted_at' => $this->deleted_at?->toIso8601String(),
         ];
     }
 }

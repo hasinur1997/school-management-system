@@ -11,6 +11,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
@@ -34,7 +36,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 class AdmissionApplication extends Model implements HasMedia
 {
     /** @use HasFactory<AdmissionApplicationFactory> */
-    use BelongsToBranch, HasFactory, HasPublicId, InteractsWithMedia;
+    use BelongsToBranch, HasFactory, HasPublicId, InteractsWithMedia, SoftDeletes;
 
     /**
      * The model's default values for attributes.
@@ -103,5 +105,13 @@ class AdmissionApplication extends Model implements HasMedia
     public function previousEducations(): HasMany
     {
         return $this->hasMany(AdmissionPreviousEducation::class, 'application_id');
+    }
+
+    /**
+     * Get the student created from this application, if it has been approved.
+     */
+    public function student(): HasOne
+    {
+        return $this->hasOne(Student::class, 'application_id');
     }
 }

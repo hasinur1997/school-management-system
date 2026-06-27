@@ -27,7 +27,7 @@ class AdmissionTablesTest extends TestCase
         $this->assertNotNull($application->desiredClass);
     }
 
-    public function test_deleting_application_cascades_to_previous_educations(): void
+    public function test_soft_delete_preserves_previous_educations_and_force_delete_cascades(): void
     {
         $application = AdmissionApplication::factory()
             ->has(AdmissionPreviousEducation::factory()->count(3), 'previousEducations')
@@ -35,8 +35,14 @@ class AdmissionTablesTest extends TestCase
 
         $this->assertDatabaseCount('admission_previous_educations', 3);
 
+        // A soft delete moves the application to the trash but preserves its
+        // children, so a restore brings the record back intact.
         $application->delete();
+        $this->assertSoftDeleted($application);
+        $this->assertDatabaseCount('admission_previous_educations', 3);
 
+        // A permanent (force) delete fires the FK cascade and clears them.
+        $application->forceDelete();
         $this->assertDatabaseCount('admission_previous_educations', 0);
     }
 
