@@ -31,6 +31,7 @@ class RoleSeeder extends Seeder
             'student.view',
             'student.create',
             'student.update',
+            'student.delete',
             'parent.manage',
             'attendance.create',
             'attendance.update',

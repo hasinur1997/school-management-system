@@ -6,6 +6,27 @@ use App\Http\Controllers\Api\V1\TransferCertificateController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function () {
+    // Trash and bulk routes sit before {student} so literal paths win over
+    // public-id route binding. Gated on student.delete.
+    Route::middleware('permission:student.delete')->group(function () {
+        Route::get('students/trash', [StudentController::class, 'trash'])
+            ->name('students.trash');
+        Route::post('students/bulk-delete', [StudentController::class, 'bulkDestroy'])
+            ->name('students.bulk-destroy');
+        Route::post('students/bulk-restore', [StudentController::class, 'bulkRestore'])
+            ->name('students.bulk-restore');
+        Route::post('students/bulk-force-delete', [StudentController::class, 'bulkForceDestroy'])
+            ->name('students.bulk-force-destroy');
+        Route::delete('students/{student}', [StudentController::class, 'destroy'])
+            ->name('students.destroy');
+        Route::post('students/{student}/restore', [StudentController::class, 'restore'])
+            ->withTrashed()
+            ->name('students.restore');
+        Route::delete('students/{student}/force', [StudentController::class, 'forceDestroy'])
+            ->withTrashed()
+            ->name('students.force-destroy');
+    });
+
     Route::get('students', [StudentController::class, 'index'])
         ->middleware('permission:student.view')
         ->name('students.index');

@@ -8,6 +8,7 @@ use App\Mail\CredentialsMail;
 use App\Models\AcademicSession;
 use App\Models\Branch;
 use App\Models\Enrollment;
+use App\Models\Invoice;
 use App\Models\ParentProfile;
 use App\Models\SchoolClass;
 use App\Models\Section;
@@ -314,6 +315,131 @@ class StudentEndpointsTest extends TestCase
         $this->withToken($this->tokenForRole('teacher'))
             ->postJson("/api/v1/students/{$student->public_id}/resend-credentials")
             ->assertStatus(403);
+    }
+
+    public function test_delete_moves_student_to_trash_and_disables_login(): void
+    {
+        $class = SchoolClass::factory()->create(['branch_id' => $this->branch->id]);
+        $section = Section::factory()->create(['class_id' => $class->id]);
+        $student = $this->makeStudent(
+            ['name_en' => 'Trash Me'],
+            enrollment: ['class_id' => $class->id, 'section_id' => $section->id, 'roll_no' => 11],
+        );
+
+        $token = $this->tokenForRole('admin');
+
+        $this->withToken($token)
+            ->deleteJson("/api/v1/students/{$student->public_id}")
+            ->assertOk()
+            ->assertJsonPath('message', 'Student moved to trash.');
+
+        $this->assertSoftDeleted('students', ['id' => $student->id]);
+        $this->assertDatabaseHas('users', ['id' => $student->user_id, 'is_active' => false]);
+
+        $this->withToken($token)
+            ->getJson('/api/v1/students?search=Trash%20Me')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+
+        $trash = $this->withToken($token)
+            ->getJson('/api/v1/students/trash?search=Trash%20Me')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $student->public_id);
+
+        $this->assertNotNull($trash->json('data.0.deleted_at'));
+    }
+
+    public function test_bulk_delete_trashes_many_and_skips_foreign_branch_ids(): void
+    {
+        $a = $this->makeStudent();
+        $b = $this->makeStudent();
+        $foreign = $this->makeStudent([], Branch::factory()->create());
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->postJson('/api/v1/students/bulk-delete', [
+                'ids' => [$a->public_id, $b->public_id, $foreign->public_id],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.deleted', 2);
+
+        $this->assertSoftDeleted('students', ['id' => $a->id]);
+        $this->assertSoftDeleted('students', ['id' => $b->id]);
+        $this->assertNotSoftDeleted('students', ['id' => $foreign->id]);
+    }
+
+    public function test_restore_brings_student_back_from_trash(): void
+    {
+        $student = $this->makeStudent(['status' => StudentStatus::Active]);
+        $student->delete();
+        $student->user->update(['is_active' => false]);
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->postJson("/api/v1/students/{$student->public_id}/restore")
+            ->assertOk()
+            ->assertJsonPath('message', 'Student restored.');
+
+        $this->assertNotSoftDeleted('students', ['id' => $student->id]);
+        $this->assertDatabaseHas('users', ['id' => $student->user_id, 'is_active' => true]);
+    }
+
+    public function test_force_delete_permanently_removes_trashed_student_without_history(): void
+    {
+        $class = SchoolClass::factory()->create(['branch_id' => $this->branch->id]);
+        $section = Section::factory()->create(['class_id' => $class->id]);
+        $student = $this->makeStudent(
+            enrollment: ['class_id' => $class->id, 'section_id' => $section->id, 'roll_no' => 22],
+        );
+        $enrollmentId = $student->enrollments()->value('id');
+        $userId = $student->user_id;
+
+        $student->delete();
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->deleteJson("/api/v1/students/{$student->public_id}/force")
+            ->assertOk()
+            ->assertJsonPath('message', 'Student permanently deleted.');
+
+        $this->assertDatabaseMissing('students', ['id' => $student->id]);
+        $this->assertDatabaseMissing('enrollments', ['id' => $enrollmentId]);
+        $this->assertDatabaseMissing('users', ['id' => $userId]);
+    }
+
+    public function test_force_delete_blocks_students_with_dependent_history(): void
+    {
+        $class = SchoolClass::factory()->create(['branch_id' => $this->branch->id]);
+        $section = Section::factory()->create(['class_id' => $class->id]);
+        $student = $this->makeStudent(
+            enrollment: ['class_id' => $class->id, 'section_id' => $section->id, 'roll_no' => 33],
+        );
+        $enrollment = $student->enrollments()->firstOrFail();
+
+        Invoice::factory()->create([
+            'branch_id' => $this->branch->id,
+            'student_id' => $student->id,
+            'enrollment_id' => $enrollment->id,
+        ]);
+
+        $student->delete();
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->deleteJson("/api/v1/students/{$student->public_id}/force")
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'Student has dependent records and cannot be permanently deleted.');
+
+        $this->assertSoftDeleted('students', ['id' => $student->id]);
+    }
+
+    public function test_trash_actions_require_student_delete_permission(): void
+    {
+        $student = $this->makeStudent();
+        $token = $this->tokenForRole('teacher');
+
+        $this->withToken($token)->getJson('/api/v1/students/trash')->assertForbidden();
+        $this->withToken($token)->deleteJson("/api/v1/students/{$student->public_id}")->assertForbidden();
+        $this->withToken($token)
+            ->postJson('/api/v1/students/bulk-delete', ['ids' => [$student->public_id]])
+            ->assertForbidden();
     }
 
     public function test_cross_branch_student_returns_404(): void

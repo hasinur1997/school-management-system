@@ -6,8 +6,15 @@ use App\Enums\EnrollmentStatus;
 use App\Enums\StudentStatus;
 use App\Jobs\SendCredentials;
 use App\Models\AcademicSession;
+use App\Models\AnnualResult;
 use App\Models\Enrollment;
+use App\Models\ExamResult;
+use App\Models\Invoice;
+use App\Models\Mark;
+use App\Models\Promotion;
 use App\Models\Student;
+use App\Models\StudentAttendance;
+use App\Models\TransferCertificate;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -140,6 +147,33 @@ class StudentService
      */
     public function list(array $filters, int $perPage): LengthAwarePaginator
     {
+        return $this->filtered($filters)
+            ->orderByDesc('id')
+            ->paginate($perPage);
+    }
+
+    /**
+     * List soft-deleted students in the caller's branch, ordered by when they
+     * were moved to trash.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    public function listTrashed(array $filters, int $perPage): LengthAwarePaginator
+    {
+        return $this->filtered($filters)
+            ->onlyTrashed()
+            ->orderByDesc('deleted_at')
+            ->paginate($perPage);
+    }
+
+    /**
+     * Build the shared branch-scoped student list query and eager-load the
+     * compact-row relations the resource reads.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    private function filtered(array $filters): Builder
+    {
         return Student::query()
             ->with([
                 'media',
@@ -163,9 +197,7 @@ class StudentService
                     ->orWhere('name_bn', 'like', $term)
                     ->orWhere('admission_no', 'like', $term)
                     ->orWhere('father_mobile', 'like', $term));
-            })
-            ->orderByDesc('id')
-            ->paginate($perPage);
+            });
     }
 
     /**
@@ -288,5 +320,158 @@ class StudentService
 
             SendCredentials::dispatch($user, $password, 'Student')->afterCommit();
         });
+    }
+
+    /**
+     * Soft delete a student and immediately disable their login.
+     */
+    public function delete(Student $student): void
+    {
+        DB::transaction(function () use ($student): void {
+            $student->delete();
+
+            $user = $student->user()->withTrashed()->first();
+
+            if ($user !== null) {
+                $user->update(['is_active' => false]);
+                $user->tokens()->delete();
+            }
+        });
+    }
+
+    /**
+     * Soft delete several students by public id, resolved branch-scoped.
+     *
+     * @param  list<string>  $publicIds
+     */
+    public function bulkDelete(array $publicIds): int
+    {
+        $students = Student::query()
+            ->whereIn('public_id', $publicIds)
+            ->get();
+
+        foreach ($students as $student) {
+            $this->delete($student);
+        }
+
+        return $students->count();
+    }
+
+    /**
+     * Restore a trashed student and re-enable the login only for active
+     * students. Inactive/TC students remain unable to sign in.
+     */
+    public function restore(Student $student): Student
+    {
+        return DB::transaction(function () use ($student): Student {
+            $student->restore();
+
+            $user = $student->user()->withTrashed()->first();
+
+            if ($user !== null) {
+                $user->update(['is_active' => $student->status === StudentStatus::Active]);
+            }
+
+            return $student;
+        });
+    }
+
+    /**
+     * Restore several trashed students by public id, resolved branch-scoped.
+     *
+     * @param  list<string>  $publicIds
+     */
+    public function bulkRestore(array $publicIds): int
+    {
+        $students = Student::onlyTrashed()
+            ->whereIn('public_id', $publicIds)
+            ->get();
+
+        foreach ($students as $student) {
+            $this->restore($student);
+        }
+
+        return $students->count();
+    }
+
+    /**
+     * Permanently delete a trashed student after proving no financial or
+     * academic history would be erased. Enrollment shell rows are removed only
+     * after all dependent-record checks pass.
+     */
+    public function forceDelete(Student $student): void
+    {
+        $this->assertForceDeletable($student);
+
+        DB::transaction(function () use ($student): void {
+            $user = $student->user()->withTrashed()->first();
+
+            $student->parents()->detach();
+            $student->enrollments()->delete();
+            $student->forceDelete();
+
+            if ($user !== null) {
+                $user->tokens()->delete();
+                $user->syncRoles([]);
+                $user->forceDelete();
+            }
+        });
+    }
+
+    /**
+     * Permanently delete several trashed students by public id, resolved
+     * branch-scoped. All rows are checked before any deletion occurs.
+     *
+     * @param  list<string>  $publicIds
+     */
+    public function bulkForceDelete(array $publicIds): int
+    {
+        $students = Student::onlyTrashed()
+            ->whereIn('public_id', $publicIds)
+            ->get();
+
+        foreach ($students as $student) {
+            $this->assertForceDeletable($student);
+        }
+
+        foreach ($students as $student) {
+            $this->forceDelete($student);
+        }
+
+        return $students->count();
+    }
+
+    /**
+     * Permanent deletion is intentionally narrower than trashing: live students
+     * must be moved to trash first, and students with history stay retained.
+     */
+    private function assertForceDeletable(Student $student): void
+    {
+        abort_unless($student->trashed(), 409, 'Student must be in trash before permanent deletion.');
+
+        $enrollmentIds = $student->enrollments()->pluck('id');
+
+        $hasStudentHistory = Invoice::withoutGlobalScopes()->where('student_id', $student->id)->exists()
+            || Promotion::withoutGlobalScopes()->where('student_id', $student->id)->exists()
+            || TransferCertificate::withoutGlobalScopes()->where('student_id', $student->id)->exists();
+
+        $hasEnrollmentHistory = $enrollmentIds->isNotEmpty() && (
+            StudentAttendance::withoutGlobalScopes()->whereIn('enrollment_id', $enrollmentIds)->exists()
+            || Mark::withoutGlobalScopes()->whereIn('enrollment_id', $enrollmentIds)->exists()
+            || ExamResult::withoutGlobalScopes()->whereIn('enrollment_id', $enrollmentIds)->exists()
+            || AnnualResult::withoutGlobalScopes()->whereIn('enrollment_id', $enrollmentIds)->exists()
+            || Invoice::withoutGlobalScopes()->whereIn('enrollment_id', $enrollmentIds)->exists()
+            || Promotion::withoutGlobalScopes()
+                ->where(fn (Builder $query) => $query
+                    ->whereIn('from_enrollment_id', $enrollmentIds)
+                    ->orWhereIn('to_enrollment_id', $enrollmentIds))
+                ->exists()
+        );
+
+        abort_if(
+            $hasStudentHistory || $hasEnrollmentHistory,
+            409,
+            'Student has dependent records and cannot be permanently deleted.',
+        );
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\StudentStatus;
 use App\Http\Controllers\Api\ApiController;
+use App\Http\Requests\Student\BulkStudentsRequest;
 use App\Http\Requests\Student\ListStudentsRequest;
 use App\Http\Requests\Student\StoreStudentRequest;
 use App\Http\Requests\Student\UpdateEnrollmentRequest;
@@ -16,6 +17,7 @@ use App\Http\Resources\StudentResource;
 use App\Models\Enrollment;
 use App\Models\Student;
 use App\Services\StudentService;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -33,6 +35,27 @@ class StudentController extends ApiController
             $request->integer('per_page', 15),
         );
 
+        return $this->paginated($students, $request);
+    }
+
+    /**
+     * Display a paginated listing of soft-deleted students.
+     */
+    public function trash(ListStudentsRequest $request): JsonResponse
+    {
+        $students = $this->students->listTrashed(
+            $request->only(['class_id', 'section_id', 'session_id', 'status', 'search']),
+            $request->integer('per_page', 15),
+        );
+
+        return $this->paginated($students, $request);
+    }
+
+    /**
+     * Build the standard paginated list envelope for student collections.
+     */
+    private function paginated(LengthAwarePaginator $students, Request $request): JsonResponse
+    {
         return response()->json([
             'success' => true,
             'message' => 'OK',
@@ -153,5 +176,65 @@ class StudentController extends ApiController
         $this->students->resendCredentials($student);
 
         return $this->success(null, 'New credentials are being sent to the student.');
+    }
+
+    /**
+     * Soft delete a student — moves it to trash and disables the login.
+     */
+    public function destroy(Student $student): JsonResponse
+    {
+        $this->students->delete($student);
+
+        return $this->success(null, 'Student moved to trash.');
+    }
+
+    /**
+     * Soft delete several students by public id.
+     */
+    public function bulkDestroy(BulkStudentsRequest $request): JsonResponse
+    {
+        $deleted = $this->students->bulkDelete($request->validated('ids'));
+
+        return $this->success(['deleted' => $deleted], 'Students moved to trash.');
+    }
+
+    /**
+     * Restore a trashed student.
+     */
+    public function restore(Student $student): JsonResponse
+    {
+        $this->students->restore($student);
+
+        return $this->success(null, 'Student restored.');
+    }
+
+    /**
+     * Restore several trashed students by public id.
+     */
+    public function bulkRestore(BulkStudentsRequest $request): JsonResponse
+    {
+        $restored = $this->students->bulkRestore($request->validated('ids'));
+
+        return $this->success(['restored' => $restored], 'Students restored.');
+    }
+
+    /**
+     * Permanently delete a trashed student.
+     */
+    public function forceDestroy(Student $student): JsonResponse
+    {
+        $this->students->forceDelete($student);
+
+        return $this->success(null, 'Student permanently deleted.');
+    }
+
+    /**
+     * Permanently delete several trashed students by public id.
+     */
+    public function bulkForceDestroy(BulkStudentsRequest $request): JsonResponse
+    {
+        $deleted = $this->students->bulkForceDelete($request->validated('ids'));
+
+        return $this->success(['deleted' => $deleted], 'Students permanently deleted.');
     }
 }

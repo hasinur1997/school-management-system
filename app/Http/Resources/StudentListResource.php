@@ -38,6 +38,7 @@ class StudentListResource extends JsonResource
             'roll_no' => $enrollment?->roll_no,
             'status' => $this->status->value,
             'photo_url' => $this->photoUrl(),
+            'deleted_at' => $this->deleted_at?->toIso8601String(),
         ];
     }
 }
