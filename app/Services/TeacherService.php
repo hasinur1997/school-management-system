@@ -6,6 +6,7 @@ use App\Enums\TeacherStatus;
 use App\Jobs\SendCredentials;
 use App\Models\AcademicSession;
 use App\Models\Teacher;
+use App\Models\TeacherAttendance;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -94,6 +95,35 @@ class TeacherService
         $sort = $filters['sort'] ?? 'name';
         $direction = $filters['direction'] ?? ($sort === 'name' ? 'asc' : 'desc');
 
+        return $this->filtered($filters)
+            ->orderBy($sort, $direction)
+            ->paginate($perPage);
+    }
+
+    /**
+     * List soft-deleted teachers in the caller's branch, most-recently-trashed
+     * first, with the same search/status filters as the live list.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    public function listTrashed(array $filters, int $perPage): LengthAwarePaginator
+    {
+        return $this->filtered($filters)
+            ->onlyTrashed()
+            ->orderByDesc('deleted_at')
+            ->paginate($perPage);
+    }
+
+    /**
+     * Base teacher query: branch-scoped, eager-loading media + user, with the
+     * shared status and free-text (name/email/phone/designation) filters
+     * applied. Shared by the live list and the trash list.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return Builder<Teacher>
+     */
+    private function filtered(array $filters): Builder
+    {
         return Teacher::query()
             ->with(['media', 'user'])
             ->when(isset($filters['status']), fn (Builder $query) => $query->where('status', $filters['status']))
@@ -104,9 +134,7 @@ class TeacherService
                     ->orWhereHas('user', fn (Builder $user) => $user->where('email', 'like', $term))
                     ->orWhere('phone', 'like', $term)
                     ->orWhere('designation', 'like', $term));
-            })
-            ->orderBy($sort, $direction)
-            ->paginate($perPage);
+            });
     }
 
     /**
@@ -184,5 +212,145 @@ class TeacherService
         $teacher->addMedia($photo)->toMediaCollection('photo');
 
         return $teacher->load(['media', 'user']);
+    }
+
+    /**
+     * Soft-delete a teacher (move to trash) and disable the linked login,
+     * revoking its tokens so any active session is cut immediately. The teacher
+     * can be restored later.
+     */
+    public function delete(Teacher $teacher): void
+    {
+        DB::transaction(function () use ($teacher): void {
+            $teacher->delete();
+
+            $user = $teacher->user()->withTrashed()->first();
+
+            if ($user !== null) {
+                $user->update(['is_active' => false]);
+                $user->tokens()->delete();
+            }
+        });
+    }
+
+    /**
+     * Soft-delete many teachers by public id. Ids are resolved branch-scoped,
+     * so foreign ids are silently skipped.
+     *
+     * @param  list<string>  $publicIds
+     */
+    public function bulkDelete(array $publicIds): int
+    {
+        $teachers = Teacher::query()
+            ->whereIn('public_id', $publicIds)
+            ->get();
+
+        foreach ($teachers as $teacher) {
+            $this->delete($teacher);
+        }
+
+        return $teachers->count();
+    }
+
+    /**
+     * Restore a trashed teacher and re-enable the login when the teacher's
+     * status is active (an inactive teacher stays disabled on restore).
+     */
+    public function restore(Teacher $teacher): Teacher
+    {
+        return DB::transaction(function () use ($teacher): Teacher {
+            $teacher->restore();
+
+            $user = $teacher->user()->withTrashed()->first();
+
+            if ($user !== null) {
+                $user->update(['is_active' => $teacher->status === TeacherStatus::Active]);
+            }
+
+            return $teacher;
+        });
+    }
+
+    /**
+     * Restore many trashed teachers by public id (branch-scoped resolution).
+     *
+     * @param  list<string>  $publicIds
+     */
+    public function bulkRestore(array $publicIds): int
+    {
+        $teachers = Teacher::onlyTrashed()
+            ->whereIn('public_id', $publicIds)
+            ->get();
+
+        foreach ($teachers as $teacher) {
+            $this->restore($teacher);
+        }
+
+        return $teachers->count();
+    }
+
+    /**
+     * Permanently delete a trashed teacher: remove the session assignments,
+     * then the teacher (sections' class_teacher_id nulls out via the FK), then
+     * the linked login. Blocked when dependent attendance history exists.
+     */
+    public function forceDelete(Teacher $teacher): void
+    {
+        $this->assertForceDeletable($teacher);
+
+        DB::transaction(function () use ($teacher): void {
+            $user = $teacher->user()->withTrashed()->first();
+
+            $teacher->assignments()->delete();
+            $teacher->forceDelete();
+
+            if ($user !== null) {
+                $user->tokens()->delete();
+                $user->syncRoles([]);
+                $user->forceDelete();
+            }
+        });
+    }
+
+    /**
+     * Permanently delete many trashed teachers by public id. Every target is
+     * checked deletable first so the batch fails before any row is removed.
+     *
+     * @param  list<string>  $publicIds
+     */
+    public function bulkForceDelete(array $publicIds): int
+    {
+        $teachers = Teacher::onlyTrashed()
+            ->whereIn('public_id', $publicIds)
+            ->get();
+
+        foreach ($teachers as $teacher) {
+            $this->assertForceDeletable($teacher);
+        }
+
+        foreach ($teachers as $teacher) {
+            $this->forceDelete($teacher);
+        }
+
+        return $teachers->count();
+    }
+
+    /**
+     * Guard permanent deletion: the teacher must already be trashed and must
+     * carry no dependent attendance history (those FKs restrict on delete).
+     */
+    private function assertForceDeletable(Teacher $teacher): void
+    {
+        abort_unless($teacher->trashed(), 409, 'Teacher must be in trash before permanent deletion.');
+
+        $hasHistory = TeacherAttendance::withoutGlobalScopes()
+            ->where('teacher_id', $teacher->id)
+            ->exists();
+
+        abort_if(
+            $hasHistory,
+            409,
+            'Teacher has dependent records and cannot be permanently deleted.',
+        );
     }
 }

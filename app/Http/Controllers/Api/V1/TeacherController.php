@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\TeacherStatus;
 use App\Http\Controllers\Api\ApiController;
+use App\Http\Requests\Teacher\BulkTeachersRequest;
 use App\Http\Requests\Teacher\ListTeachersRequest;
 use App\Http\Requests\Teacher\StoreTeacherRequest;
 use App\Http\Requests\Teacher\UpdateTeacherRequest;
@@ -12,7 +13,9 @@ use App\Http\Requests\Teacher\UploadTeacherPhotoRequest;
 use App\Http\Resources\TeacherResource;
 use App\Models\Teacher;
 use App\Services\TeacherService;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class TeacherController extends ApiController
 {
@@ -28,6 +31,37 @@ class TeacherController extends ApiController
             $request->integer('per_page', 15),
         );
 
+        return response()->json([
+            'success' => true,
+            'message' => 'OK',
+            'data' => TeacherResource::collection($teachers)->resolve($request),
+            'meta' => [
+                'current_page' => $teachers->currentPage(),
+                'per_page' => $teachers->perPage(),
+                'total' => $teachers->total(),
+                'last_page' => $teachers->lastPage(),
+            ],
+        ]);
+    }
+
+    /**
+     * Display a paginated listing of soft-deleted teachers.
+     */
+    public function trash(ListTeachersRequest $request): JsonResponse
+    {
+        $teachers = $this->teachers->listTrashed(
+            $request->only(['status', 'search']),
+            $request->integer('per_page', 15),
+        );
+
+        return $this->paginated($teachers, $request);
+    }
+
+    /**
+     * Build the standard paginated list envelope for teacher collections.
+     */
+    private function paginated(LengthAwarePaginator $teachers, Request $request): JsonResponse
+    {
         return response()->json([
             'success' => true,
             'message' => 'OK',
@@ -104,5 +138,65 @@ class TeacherController extends ApiController
         $this->teachers->resendCredentials($teacher);
 
         return $this->success(null, 'New credentials are being sent to the teacher.');
+    }
+
+    /**
+     * Soft-delete a teacher (move to trash).
+     */
+    public function destroy(Teacher $teacher): JsonResponse
+    {
+        $this->teachers->delete($teacher);
+
+        return $this->success(null, 'Teacher moved to trash.');
+    }
+
+    /**
+     * Soft-delete many teachers by public id.
+     */
+    public function bulkDestroy(BulkTeachersRequest $request): JsonResponse
+    {
+        $deleted = $this->teachers->bulkDelete($request->validated('ids'));
+
+        return $this->success(['deleted' => $deleted], 'Teachers moved to trash.');
+    }
+
+    /**
+     * Restore a trashed teacher.
+     */
+    public function restore(Teacher $teacher): JsonResponse
+    {
+        $this->teachers->restore($teacher);
+
+        return $this->success(null, 'Teacher restored.');
+    }
+
+    /**
+     * Restore many trashed teachers by public id.
+     */
+    public function bulkRestore(BulkTeachersRequest $request): JsonResponse
+    {
+        $restored = $this->teachers->bulkRestore($request->validated('ids'));
+
+        return $this->success(['restored' => $restored], 'Teachers restored.');
+    }
+
+    /**
+     * Permanently delete a trashed teacher.
+     */
+    public function forceDestroy(Teacher $teacher): JsonResponse
+    {
+        $this->teachers->forceDelete($teacher);
+
+        return $this->success(null, 'Teacher permanently deleted.');
+    }
+
+    /**
+     * Permanently delete many trashed teachers by public id.
+     */
+    public function bulkForceDestroy(BulkTeachersRequest $request): JsonResponse
+    {
+        $deleted = $this->teachers->bulkForceDelete($request->validated('ids'));
+
+        return $this->success(['deleted' => $deleted], 'Teachers permanently deleted.');
     }
 }

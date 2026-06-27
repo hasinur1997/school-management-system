@@ -33,6 +33,7 @@ class TeacherResource extends JsonResource
             'joining_date' => $this->joining_date?->toDateString(),
             'status' => $this->status->value,
             'photo_url' => $this->photoUrl(),
+            'deleted_at' => $this->deleted_at?->toIso8601String(),
             'assignments' => $this->whenLoaded('assignments', fn () => $this->assignments->map(fn (TeacherAssignment $assignment): array => [
                 'class' => $assignment->schoolClass === null ? null : [
                     'id' => $assignment->schoolClass->public_id,

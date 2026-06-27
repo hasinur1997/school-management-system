@@ -36,6 +36,10 @@ class AttendanceService
         $enrollments = Enrollment::query()
             ->where('section_id', $sectionId)
             ->where('status', EnrollmentStatus::Active)
+            // Exclude enrollments whose student has been soft-deleted: their
+            // enrollment stays Active (so a restore brings the roster back),
+            // but the trashed student must not appear on the sheet.
+            ->whereHas('student')
             ->with('student.media')
             ->orderBy('roll_no')
             ->get();

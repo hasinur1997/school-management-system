@@ -36,6 +36,10 @@ class MarkService
         $enrollments = Enrollment::query()
             ->where('section_id', $sectionId)
             ->where('status', EnrollmentStatus::Active)
+            // Exclude enrollments whose student has been soft-deleted: their
+            // enrollment stays Active, but the trashed student must not appear
+            // on the sheet.
+            ->whereHas('student')
             ->with('student')
             ->orderBy('roll_no')
             ->get();
