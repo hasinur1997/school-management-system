@@ -11,9 +11,21 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middleware('permission:marks.entry')
         ->name('exams.marks.sheet');
 
+    Route::get('exams/{exam}/marks/matrix', [MarkController::class, 'matrix'])
+        ->middleware('permission:marks.entry')
+        ->name('exams.marks.matrix');
+
     Route::post('exams/{exam}/marks', [MarkController::class, 'store'])
         ->middleware('permission:marks.entry')
         ->name('exams.marks.store');
+
+    Route::post('exams/{exam}/marks/publish', [MarkController::class, 'publish'])
+        ->middleware('permission:marks.entry')
+        ->name('exams.marks.publish');
+
+    Route::post('exams/{exam}/marks/unpublish', [MarkController::class, 'unpublish'])
+        ->middleware('permission:marks.entry')
+        ->name('exams.marks.unpublish');
 
     Route::get('exams/{exam}/marks', [MarkController::class, 'index'])
         ->middleware('permission:marks.view')

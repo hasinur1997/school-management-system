@@ -74,7 +74,9 @@ class ExamCrudTest extends TestCase
             ->assertJsonPath('data.name', 'First Semester 2026')
             ->assertJsonPath('data.all_classes', false)
             ->assertJsonPath('data.status', 'upcoming')
-            ->assertJsonCount(2, 'data.classes');
+            ->assertJsonCount(2, 'data.classes')
+            // For an explicit exam, effective_classes mirrors the pivot.
+            ->assertJsonCount(2, 'data.effective_classes');
 
         $examId = Exam::query()->where('session_id', $this->session->id)->value('id');
 
@@ -103,7 +105,11 @@ class ExamCrudTest extends TestCase
 
         $response->assertCreated()
             ->assertJsonPath('data.all_classes', true)
-            ->assertJsonCount(0, 'data.classes');
+            ->assertJsonCount(0, 'data.classes')
+            // `classes` (the pivot) is empty, but `effective_classes` resolves
+            // to every class in the branch so the marks-entry picker can scope
+            // itself: the setUp class plus the one created above.
+            ->assertJsonCount(2, 'data.effective_classes');
 
         $this->assertDatabaseHas('exams', [
             'session_id' => $this->session->id,

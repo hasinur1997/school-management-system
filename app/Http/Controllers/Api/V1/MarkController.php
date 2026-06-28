@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\ApiController;
 use App\Http\Requests\Mark\ListMarksRequest;
+use App\Http\Requests\Mark\MarkMatrixRequest;
 use App\Http\Requests\Mark\MarkSheetRequest;
 use App\Http\Requests\Mark\StoreMarksRequest;
+use App\Http\Resources\MarkMatrixResource;
 use App\Http\Resources\MarkResource;
 use App\Http\Resources\MarkSheetResource;
 use App\Models\Exam;
@@ -29,6 +31,44 @@ class MarkController extends ApiController
         );
 
         return $this->success(MarkSheetResource::make($sheet));
+    }
+
+    /**
+     * Return the multi-subject marks matrix for a section of an exam: every
+     * subject column of the section's class and the active roster, each student
+     * carrying one mark cell per subject.
+     */
+    public function matrix(MarkMatrixRequest $request, Exam $exam): JsonResponse
+    {
+        $matrix = $this->marks->matrix(
+            $exam,
+            $request->integer('class_id'),
+            $request->sectionId(),
+        );
+
+        return $this->success(MarkMatrixResource::make($matrix));
+    }
+
+    /**
+     * Lock the exam's marks (move it to published status), freezing further mark
+     * edits.
+     */
+    public function publish(Exam $exam): JsonResponse
+    {
+        $this->marks->publish($exam);
+
+        return $this->success(['status' => $exam->status->value], 'Marks published & locked');
+    }
+
+    /**
+     * Unlock a published exam's marks for corrections (move it back to
+     * completed).
+     */
+    public function unpublish(Exam $exam): JsonResponse
+    {
+        $this->marks->unpublish($exam);
+
+        return $this->success(['status' => $exam->status->value], 'Marks unlocked for editing');
     }
 
     /**

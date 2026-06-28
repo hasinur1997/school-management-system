@@ -27,6 +27,7 @@ class MarkSheetResource extends JsonResource
             'exam' => [
                 'id' => $this->resource['exam']->public_id,
                 'name' => $this->resource['exam']->name,
+                'status' => $this->resource['exam']->status->value,
             ],
             'subject' => [
                 'full_marks' => $subject->full_marks,
@@ -39,7 +40,9 @@ class MarkSheetResource extends JsonResource
                     'enrollment_id' => $enrollment->public_id,
                     'roll_no' => $enrollment->roll_no,
                     'name_en' => $enrollment->student->name_en,
+                    'sid' => $enrollment->student->admission_no,
                     'obtained_marks' => $mark !== null ? (float) $mark->obtained_marks : null,
+                    'is_absent' => $mark !== null ? (bool) $mark->is_absent : false,
                 ];
             })->all(),
         ];

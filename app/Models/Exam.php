@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Collection;
 
 /**
  * An exam held for one session and a set of classes. An exam targets either an
@@ -78,14 +79,33 @@ class Exam extends Model
      */
     public function classIds(): array
     {
-        if ($this->all_classes) {
-            return SchoolClass::query()
+        return $this->effectiveClasses()->pluck('id')->all();
+    }
+
+    /**
+     * The effective classes this exam covers as full models: the branch's
+     * classes when `all_classes` is set, otherwise the explicitly attached
+     * pivot rows. Memoized so a resource can read names/public ids without
+     * re-querying. Drives both the marks/result engines (via {@see classIds()})
+     * and the API resource's class list, so an `all_classes` exam still reports
+     * which classes it covers rather than an empty set.
+     *
+     * @return Collection<int, SchoolClass>
+     */
+    public function effectiveClasses(): Collection
+    {
+        return $this->effectiveClasses ??= $this->all_classes
+            ? SchoolClass::query()
                 ->withoutGlobalScope(BranchScope::class)
                 ->where('branch_id', $this->branch_id)
-                ->pluck('id')
-                ->all();
-        }
-
-        return $this->classes()->pluck('school_classes.id')->all();
+                ->get()
+            : $this->classes;
     }
+
+    /**
+     * Memoized backing store for {@see effectiveClasses()}.
+     *
+     * @var Collection<int, SchoolClass>|null
+     */
+    protected ?Collection $effectiveClasses = null;
 }

@@ -35,7 +35,9 @@ class StoreMarksRequest extends FormRequest
             'subject_id' => ['required', 'integer'],
             'marks' => ['required', 'array', 'min:1'],
             'marks.*.enrollment_id' => ['required', 'integer', 'distinct'],
-            'marks.*.obtained_marks' => ['required', 'numeric'],
+            'marks.*.is_absent' => ['sometimes', 'boolean'],
+            // An absent row carries no marks; a present row must supply them.
+            'marks.*.obtained_marks' => ['required_if:marks.*.is_absent,false,0', 'nullable', 'numeric'],
         ];
     }
 
@@ -83,6 +85,11 @@ class StoreMarksRequest extends FormRequest
                         'The selected enrollment is not an active member of this class.',
                     );
 
+                    continue;
+                }
+
+                // Absent rows carry no marks to range-check.
+                if (! empty($row['is_absent'])) {
                     continue;
                 }
 

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\EnrollmentStatus;
+use App\Enums\ExamStatus;
 use App\Models\Enrollment;
 use App\Models\Exam;
 use App\Models\Mark;
@@ -60,6 +61,53 @@ class MarkService
     }
 
     /**
+     * Build the multi-subject marks matrix for a section of an exam: every
+     * subject of the section's class, plus the section's active enrollments in
+     * roll order, each carrying the mark already entered for every subject (or
+     * null). Powers the all-subjects grid (one row per student, one column per
+     * subject).
+     *
+     * Three queries — subjects, enrollments (with student), and the existing
+     * marks keyed by "enrollment:subject" — so there is no N+1.
+     *
+     * Pass a section id to narrow the roster to that section; pass null for the
+     * whole class (all sections).
+     *
+     * @return array{exam: Exam, subjects: \Illuminate\Database\Eloquent\Collection<int, Subject>, enrollments: \Illuminate\Database\Eloquent\Collection<int, Enrollment>, marks: Collection<string, Mark>}
+     */
+    public function matrix(Exam $exam, int $classId, ?int $sectionId = null): array
+    {
+        $subjects = Subject::query()
+            ->where('class_id', $classId)
+            ->orderBy('id')
+            ->get();
+
+        $enrollments = Enrollment::query()
+            ->where('class_id', $classId)
+            ->when($sectionId !== null, fn ($query) => $query->where('section_id', $sectionId))
+            ->where('status', EnrollmentStatus::Active)
+            ->whereHas('student')
+            ->with('student')
+            ->orderBy('section_id')
+            ->orderBy('roll_no')
+            ->get();
+
+        $marks = Mark::query()
+            ->where('exam_id', $exam->id)
+            ->whereIn('subject_id', $subjects->modelKeys())
+            ->whereIn('enrollment_id', $enrollments->modelKeys())
+            ->get()
+            ->keyBy(fn (Mark $mark): string => $mark->enrollment_id.':'.$mark->subject_id);
+
+        return [
+            'exam' => $exam,
+            'subjects' => $subjects,
+            'enrollments' => $enrollments,
+            'marks' => $marks,
+        ];
+    }
+
+    /**
      * Bulk-save marks for one subject of an exam. Structural validation
      * (published freeze, subject in class, active enrollments, range) is handled
      * by StoreMarksRequest; here we enforce the teacher-assignment rule and
@@ -70,7 +118,11 @@ class MarkService
      * existing rows via the (exam_id, enrollment_id, subject_id) unique key, so
      * the operation is idempotent.
      *
-     * @param  array<int, array{enrollment_id: int, obtained_marks: int|float}>  $marks
+     * An absent row is stored as 0 obtained marks with `is_absent` set, so it
+     * grades to the fail band and result generation still sums cleanly while the
+     * UI can show "Absent" rather than a literal zero.
+     *
+     * @param  array<int, array{enrollment_id: int, obtained_marks?: int|float|null, is_absent?: bool}>  $marks
      * @return int the number of marks saved
      */
     public function saveBulk(Exam $exam, int $subjectId, array $marks, User $user): int
@@ -80,14 +132,17 @@ class MarkService
         $now = now();
 
         $rows = array_map(function (array $row) use ($exam, $subjectId, $user, $now): array {
-            $resolved = $this->grades->resolve($row['obtained_marks']);
+            $absent = $row['is_absent'] ?? false;
+            $obtained = $absent ? 0 : $row['obtained_marks'];
+            $resolved = $this->grades->resolve($obtained);
 
             return [
                 'public_id' => Mark::newPublicId(),
                 'exam_id' => $exam->id,
                 'enrollment_id' => $row['enrollment_id'],
                 'subject_id' => $subjectId,
-                'obtained_marks' => $row['obtained_marks'],
+                'obtained_marks' => $obtained,
+                'is_absent' => $absent,
                 'grade' => $resolved['grade'],
                 'grade_point' => $resolved['grade_point'],
                 'entered_by' => $user->id,
@@ -100,11 +155,38 @@ class MarkService
             Mark::upsert(
                 $chunk,
                 ['exam_id', 'enrollment_id', 'subject_id'],
-                ['obtained_marks', 'grade', 'grade_point', 'entered_by', 'updated_at'],
+                ['obtained_marks', 'is_absent', 'grade', 'grade_point', 'entered_by', 'updated_at'],
             );
         }
 
         return count($rows);
+    }
+
+    /**
+     * Lock the exam's marks by moving it to published status; published exams are
+     * frozen against further mark edits (StoreMarksRequest rejects them with a
+     * 409). Idempotent — re-publishing a published exam is a no-op.
+     */
+    public function publish(Exam $exam): Exam
+    {
+        if ($exam->status !== ExamStatus::Published) {
+            $exam->update(['status' => ExamStatus::Published]);
+        }
+
+        return $exam->refresh();
+    }
+
+    /**
+     * Unlock a published exam for corrections by moving it back to completed, so
+     * marks can be edited again. Idempotent for a non-published exam.
+     */
+    public function unpublish(Exam $exam): Exam
+    {
+        if ($exam->status === ExamStatus::Published) {
+            $exam->update(['status' => ExamStatus::Completed]);
+        }
+
+        return $exam->refresh();
     }
 
     /**

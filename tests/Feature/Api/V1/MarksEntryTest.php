@@ -129,6 +129,124 @@ class MarksEntryTest extends TestCase
             ->assertJsonPath('data.students.1.obtained_marks', null);
     }
 
+    public function test_matrix_returns_every_subject_column_with_marks(): void
+    {
+        $science = Subject::factory()->create([
+            'class_id' => $this->class->id,
+            'name' => 'Science',
+            'full_marks' => 100,
+            'pass_marks' => 33,
+        ]);
+
+        $a = $this->enroll(1);
+        $b = $this->enroll(2);
+
+        Mark::factory()->create([
+            'exam_id' => $this->exam->id,
+            'enrollment_id' => $a->id,
+            'subject_id' => $this->subject->id,
+            'obtained_marks' => 78.50,
+            'grade' => 'A',
+            'grade_point' => 4.00,
+            'entered_by' => User::factory()->create(['branch_id' => $this->branch->id])->id,
+        ]);
+
+        $this->withToken($this->superAdminToken())
+            ->getJson("/api/v1/exams/{$this->exam->public_id}/marks/matrix?class_id={$this->class->id}")
+            ->assertOk()
+            ->assertJsonCount(2, 'data.subjects')
+            ->assertJsonCount(2, 'data.students')
+            ->assertJsonPath('data.students.0.enrollment_id', $a->public_id)
+            ->assertJsonCount(2, 'data.students.0.marks')
+            ->assertJsonPath('data.students.0.marks.0.obtained_marks', 78.5)
+            ->assertJsonPath('data.students.0.marks.1.obtained_marks', null)
+            ->assertJsonPath('data.students.1.marks.0.obtained_marks', null);
+
+        // Subject column ids are public ids, consumable by the per-subject save.
+        $this->assertContains(
+            $science->public_id,
+            collect($this->getJson("/api/v1/exams/{$this->exam->public_id}/marks/matrix?class_id={$this->class->id}",
+                ['Authorization' => 'Bearer '.$this->superAdminToken()])->json('data.subjects'))->pluck('id')->all(),
+        );
+    }
+
+    public function test_matrix_loads_whole_class_or_narrows_to_a_section(): void
+    {
+        $other = Section::factory()->create(['class_id' => $this->class->id, 'name' => 'B']);
+        $this->enroll(1);
+        $this->enroll(2);
+        $this->enroll(1, $other);
+
+        // No section → the whole class (all sections).
+        $this->withToken($this->superAdminToken())
+            ->getJson("/api/v1/exams/{$this->exam->public_id}/marks/matrix?class_id={$this->class->id}")
+            ->assertOk()
+            ->assertJsonCount(3, 'data.students');
+
+        // Section filter → only that section's roster.
+        $this->withToken($this->superAdminToken())
+            ->getJson("/api/v1/exams/{$this->exam->public_id}/marks/matrix?class_id={$this->class->id}&section_id={$other->id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'data.students');
+    }
+
+    public function test_absent_row_is_stored_as_zero_with_flag(): void
+    {
+        $a = $this->enroll(1);
+
+        $this->withToken($this->superAdminToken())
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/marks", [
+                'subject_id' => $this->subject->id,
+                'marks' => [['enrollment_id' => $a->id, 'is_absent' => true]],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.saved', 1);
+
+        $this->assertDatabaseHas('marks', [
+            'enrollment_id' => $a->id,
+            'subject_id' => $this->subject->id,
+            'obtained_marks' => 0.00,
+            'is_absent' => true,
+            'grade' => 'F',
+        ]);
+
+        $this->withToken($this->superAdminToken())
+            ->getJson("/api/v1/exams/{$this->exam->public_id}/marks/sheet?subject_id={$this->subject->id}&section_id={$this->section->id}")
+            ->assertOk()
+            ->assertJsonPath('data.students.0.is_absent', true);
+    }
+
+    public function test_publish_freezes_then_unpublish_reopens_marks(): void
+    {
+        $a = $this->enroll(1);
+
+        $this->withToken($this->superAdminToken())
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/marks/publish")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'published');
+
+        // A published exam rejects further mark edits.
+        $this->withToken($this->superAdminToken())
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/marks", [
+                'subject_id' => $this->subject->id,
+                'marks' => [['enrollment_id' => $a->id, 'obtained_marks' => 78.5]],
+            ])
+            ->assertStatus(409);
+
+        $this->withToken($this->superAdminToken())
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/marks/unpublish")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'completed');
+
+        // Reopened — edits succeed again.
+        $this->withToken($this->superAdminToken())
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/marks", [
+                'subject_id' => $this->subject->id,
+                'marks' => [['enrollment_id' => $a->id, 'obtained_marks' => 78.5]],
+            ])
+            ->assertOk();
+    }
+
     public function test_bulk_save_inserts_then_updates_with_snapshots(): void
     {
         $a = $this->enroll(1);

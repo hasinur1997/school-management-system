@@ -42,6 +42,18 @@ class ExamResource extends JsonResource
                     ])
                     ->all(),
             ),
+            // The concrete set of classes this exam actually covers — the
+            // explicit pivot, or every class in the branch when `all_classes`
+            // is set. Unlike `classes` (which is empty for an all-classes exam),
+            // this is never empty, so the marks-entry class picker can scope
+            // itself to valid classes instead of every branch's classes.
+            'effective_classes' => $this->effectiveClasses()
+                ->map(fn (SchoolClass $class) => [
+                    'id' => $class->public_id,
+                    'name' => $class->name,
+                ])
+                ->values()
+                ->all(),
             'start_date' => $this->start_date?->format('Y-m-d'),
             'end_date' => $this->end_date?->format('Y-m-d'),
             'status' => $this->status->value,

@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * local branch_id), so isolation comes from BelongsToBranchThroughEnrollment.
  * Unique per (exam_id, enrollment_id, subject_id), so re-entry updates the row.
  */
-#[Fillable(['exam_id', 'enrollment_id', 'subject_id', 'obtained_marks', 'grade', 'grade_point', 'entered_by'])]
+#[Fillable(['exam_id', 'enrollment_id', 'subject_id', 'obtained_marks', 'is_absent', 'grade', 'grade_point', 'entered_by'])]
 class Mark extends Model
 {
     /** @use HasFactory<MarkFactory> */
@@ -33,6 +33,7 @@ class Mark extends Model
         return [
             'obtained_marks' => 'decimal:2',
             'grade_point' => 'decimal:2',
+            'is_absent' => 'boolean',
         ];
     }
 
