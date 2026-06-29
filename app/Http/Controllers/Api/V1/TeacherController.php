@@ -27,7 +27,7 @@ class TeacherController extends ApiController
     public function index(ListTeachersRequest $request): JsonResponse
     {
         $teachers = $this->teachers->list(
-            $request->only(['status', 'search', 'sort', 'direction']),
+            $request->withBranchFilter($request->only(['status', 'search', 'sort', 'direction'])),
             $request->integer('per_page', 15),
         );
 
@@ -50,7 +50,7 @@ class TeacherController extends ApiController
     public function trash(ListTeachersRequest $request): JsonResponse
     {
         $teachers = $this->teachers->listTrashed(
-            $request->only(['status', 'search']),
+            $request->withBranchFilter($request->only(['status', 'search'])),
             $request->integer('per_page', 15),
         );
 

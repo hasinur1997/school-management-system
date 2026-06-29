@@ -24,6 +24,9 @@ class ExamService
     {
         return Exam::query()
             ->with(['session', 'classes'])
+            // Super-admin branch narrowing; BranchScope already governs everyone
+            // else (see App\Models\Scopes\BranchScope).
+            ->when(isset($filters['branch_id']), fn (Builder $query) => $query->where('branch_id', $filters['branch_id']))
             ->when(isset($filters['session_id']), fn (Builder $query) => $query->where('session_id', $filters['session_id']))
             ->when(
                 isset($filters['class_id']),

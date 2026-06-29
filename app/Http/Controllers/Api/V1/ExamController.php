@@ -22,7 +22,7 @@ class ExamController extends ApiController
     public function index(ListExamsRequest $request): JsonResponse
     {
         $exams = $this->exams->list(
-            $request->only(['session_id', 'class_id', 'type', 'status']),
+            $request->withBranchFilter($request->only(['session_id', 'class_id', 'type', 'status'])),
             $request->integer('per_page', 15),
         );
 

@@ -47,7 +47,7 @@ class TeacherAttendanceController extends ApiController
     public function index(ListTeacherAttendanceRequest $request): JsonResponse
     {
         $records = $this->attendance->list(
-            $request->only(['teacher_id', 'date', 'month', 'year', 'status']),
+            $request->withBranchFilter($request->only(['teacher_id', 'date', 'month', 'year', 'status'])),
             $request->integer('per_page', 15),
         );
 

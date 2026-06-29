@@ -65,6 +65,9 @@ class ParentService
     {
         return ParentProfile::query()
             ->with(self::WITH)
+            // Super-admin branch narrowing; BranchScope already governs everyone
+            // else (see App\Models\Scopes\BranchScope).
+            ->when(isset($filters['branch_id']), fn (Builder $query) => $query->where('branch_id', $filters['branch_id']))
             ->when(isset($filters['search']), function (Builder $query) use ($filters): void {
                 $term = '%'.$filters['search'].'%';
                 $query->where(fn (Builder $q) => $q

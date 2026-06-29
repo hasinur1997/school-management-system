@@ -126,6 +126,9 @@ class TeacherService
     {
         return Teacher::query()
             ->with(['media', 'user'])
+            // Super-admin branch narrowing; BranchScope already governs everyone
+            // else (see App\Models\Scopes\BranchScope).
+            ->when(isset($filters['branch_id']), fn (Builder $query) => $query->where('branch_id', $filters['branch_id']))
             ->when(isset($filters['status']), fn (Builder $query) => $query->where('status', $filters['status']))
             ->when(isset($filters['search']), function (Builder $query) use ($filters): void {
                 $term = '%'.$filters['search'].'%';

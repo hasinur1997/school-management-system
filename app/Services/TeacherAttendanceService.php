@@ -23,6 +23,9 @@ class TeacherAttendanceService
     {
         return TeacherAttendance::query()
             ->with('teacher')
+            // Super-admin branch narrowing through the teacher (these rows carry
+            // no branch_id of their own); BranchScope governs everyone else.
+            ->when(isset($filters['branch_id']), fn (Builder $query) => $query->whereHas('teacher', fn (Builder $teacher) => $teacher->where('branch_id', $filters['branch_id'])))
             ->when(isset($filters['teacher_id']), fn (Builder $query) => $query->where('teacher_id', $filters['teacher_id']))
             ->when(isset($filters['date']), fn (Builder $query) => $query->whereDate('date', $filters['date']))
             ->when(isset($filters['month']), fn (Builder $query) => $query->whereMonth('date', $filters['month']))

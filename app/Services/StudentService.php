@@ -180,6 +180,9 @@ class StudentService
                 'currentEnrollment.schoolClass',
                 'currentEnrollment.section',
             ])
+            // Super-admin branch narrowing; BranchScope already governs everyone
+            // else (see App\Models\Scopes\BranchScope).
+            ->when(isset($filters['branch_id']), fn (Builder $query) => $query->where('branch_id', $filters['branch_id']))
             ->when(
                 isset($filters['class_id']) || isset($filters['section_id']) || isset($filters['session_id']),
                 fn (Builder $query) => $query->whereHas('enrollments', function (Builder $enrollment) use ($filters): void {

@@ -22,6 +22,7 @@ use App\Models\Teacher;
 use App\Models\TeacherAssignment;
 use App\Models\TeacherAttendance;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
@@ -49,16 +50,21 @@ class DashboardService
      *
      * @return array<string, mixed>
      */
-    public function for(User $user): array
+    public function for(User $user, ?int $branchFilter = null): array
     {
         $view = $this->roleView($user);
+
+        // Only super admins choose a branch; everyone else is pinned to their
+        // own branch by BranchScope, so the explicit filter stays null for them.
+        $branch = $user->isSuperAdmin() ? $branchFilter : null;
         $branchId = $user->branch_id ?? 0;
+        $branchKey = $branch ?? 'all';
 
         return Cache::remember(
-            "dashboard:{$branchId}:{$view}:{$user->id}",
+            "dashboard:{$branchId}:{$branchKey}:{$view}:{$user->id}",
             self::CACHE_TTL,
             fn (): array => match ($view) {
-                'staff' => $this->staff(),
+                'staff' => $this->staff($branch),
                 'teacher' => $this->teacher($user),
                 'parent' => $this->parent($user),
                 default => $this->student($user),
@@ -93,23 +99,30 @@ class DashboardService
      * month's income/expense/net, the count of invoices still owing, and the
      * branch totals (active students, active teachers, asset value).
      *
+     * A super admin may pass a branch id to narrow every figure to one branch;
+     * null aggregates across all branches. For branch-bound staff BranchScope
+     * already constrains these queries, so the caller passes null.
+     *
      * @return array<string, mixed>
      */
-    private function staff(): array
+    private function staff(?int $branch = null): array
     {
         [$monthStart, $monthEnd] = [Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth()];
 
-        $income = (string) Income::query()
+        $scoped = fn (Builder $query): Builder => $query
+            ->when($branch !== null, fn (Builder $q) => $q->where('branch_id', $branch));
+
+        $income = (string) $scoped(Income::query())
             ->whereBetween('date', [$monthStart->toDateString(), $monthEnd->toDateString()])
             ->sum('amount');
-        $expense = (string) Expense::query()
+        $expense = (string) $scoped(Expense::query())
             ->whereBetween('date', [$monthStart->toDateString(), $monthEnd->toDateString()])
             ->sum('amount');
 
         return [
             'role_view' => 'staff',
-            'today_attendance_percent' => $this->todayAttendancePercent(),
-            'pending_admissions' => (int) AdmissionApplication::query()
+            'today_attendance_percent' => $this->todayAttendancePercent($branch),
+            'pending_admissions' => (int) $scoped(AdmissionApplication::query())
                 ->where('status', AdmissionStatus::Pending->value)
                 ->count(),
             'month' => [
@@ -117,13 +130,13 @@ class DashboardService
                 'expense' => $this->money($expense),
                 'net' => $this->money(bcsub($income, $expense, 2)),
             ],
-            'unpaid_invoices' => (int) Invoice::query()
+            'unpaid_invoices' => (int) $scoped(Invoice::query())
                 ->whereIn('status', [InvoiceStatus::Unpaid->value, InvoiceStatus::Partial->value])
                 ->count(),
             'totals' => [
-                'students' => (int) Student::query()->where('status', StudentStatus::Active->value)->count(),
-                'teachers' => (int) Teacher::query()->where('status', TeacherStatus::Active->value)->count(),
-                'asset_value' => $this->money($this->assetValue()),
+                'students' => (int) $scoped(Student::query())->where('status', StudentStatus::Active->value)->count(),
+                'teachers' => (int) $scoped(Teacher::query())->where('status', TeacherStatus::Active->value)->count(),
+                'asset_value' => $this->money($this->assetValue($branch)),
             ],
         ];
     }
@@ -295,9 +308,10 @@ class DashboardService
      * recorded today, one decimal place, scoped to in-branch students through
      * the enrollment chain. Zero when nothing has been recorded yet.
      */
-    private function todayAttendancePercent(): float
+    private function todayAttendancePercent(?int $branch = null): float
     {
         $row = StudentAttendance::query()
+            ->when($branch !== null, fn (Builder $query) => $query->where('branch_id', $branch))
             ->whereDate('date', Carbon::today()->toDateString())
             ->whereHas('enrollment.student')
             ->selectRaw('COUNT(*) as total, SUM(CASE WHEN status IN (?, ?) THEN 1 ELSE 0 END) as attended', [
@@ -319,9 +333,10 @@ class DashboardService
      * The branch's asset value: the sum of in_use + damaged asset values,
      * disposed assets excluded (the Task 11.4 rule).
      */
-    private function assetValue(): string
+    private function assetValue(?int $branch = null): string
     {
         return (string) Asset::query()
+            ->when($branch !== null, fn (Builder $query) => $query->where('branch_id', $branch))
             ->whereIn('status', [AssetStatus::InUse->value, AssetStatus::Damaged->value])
             ->sum('value');
     }

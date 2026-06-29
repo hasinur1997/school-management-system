@@ -127,6 +127,9 @@ class AdmissionService
     {
         return AdmissionApplication::query()
             ->with('desiredClass')
+            // Super-admin branch narrowing; BranchScope already governs everyone
+            // else (see App\Models\Scopes\BranchScope).
+            ->when(isset($filters['branch_id']), fn (Builder $query) => $query->where('branch_id', $filters['branch_id']))
             ->when(isset($filters['status']), fn (Builder $query) => $query->where('status', $filters['status']))
             ->when(isset($filters['desired_class_id']), fn (Builder $query) => $query->where('desired_class_id', $filters['desired_class_id']))
             ->when(isset($filters['from']), fn (Builder $query) => $query->whereDate('created_at', '>=', $filters['from']))

@@ -26,7 +26,7 @@ class ParentController extends ApiController
     public function index(ListParentsRequest $request): JsonResponse
     {
         $parents = $this->parents->list(
-            $request->only(['search']),
+            $request->withBranchFilter($request->only(['search'])),
             $request->integer('per_page', 15),
         );
 
@@ -39,7 +39,7 @@ class ParentController extends ApiController
     public function trash(ListParentsRequest $request): JsonResponse
     {
         $parents = $this->parents->listTrashed(
-            $request->only(['search']),
+            $request->withBranchFilter($request->only(['search'])),
             $request->integer('per_page', 15),
         );
 

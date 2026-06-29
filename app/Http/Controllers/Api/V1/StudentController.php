@@ -31,7 +31,7 @@ class StudentController extends ApiController
     public function index(ListStudentsRequest $request): JsonResponse
     {
         $students = $this->students->list(
-            $request->only(['class_id', 'section_id', 'session_id', 'status', 'search']),
+            $request->withBranchFilter($request->only(['class_id', 'section_id', 'session_id', 'status', 'search'])),
             $request->integer('per_page', 15),
         );
 
@@ -44,7 +44,7 @@ class StudentController extends ApiController
     public function trash(ListStudentsRequest $request): JsonResponse
     {
         $students = $this->students->listTrashed(
-            $request->only(['class_id', 'section_id', 'session_id', 'status', 'search']),
+            $request->withBranchFilter($request->only(['class_id', 'section_id', 'session_id', 'status', 'search'])),
             $request->integer('per_page', 15),
         );
 

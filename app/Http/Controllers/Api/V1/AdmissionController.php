@@ -30,7 +30,7 @@ class AdmissionController extends ApiController
     public function index(ListAdmissionsRequest $request): JsonResponse
     {
         $applications = $this->admissions->list(
-            $request->only(['status', 'desired_class_id', 'from', 'to', 'search']),
+            $request->withBranchFilter($request->only(['status', 'desired_class_id', 'from', 'to', 'search'])),
             $request->integer('per_page', 15),
         );
 
@@ -45,7 +45,7 @@ class AdmissionController extends ApiController
     public function trash(ListAdmissionsRequest $request): JsonResponse
     {
         $applications = $this->admissions->listTrashed(
-            $request->only(['desired_class_id', 'from', 'to', 'search']),
+            $request->withBranchFilter($request->only(['desired_class_id', 'from', 'to', 'search'])),
             $request->integer('per_page', 15),
         );
 
