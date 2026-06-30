@@ -311,9 +311,9 @@ class DashboardService
     private function todayAttendancePercent(?int $branch = null): float
     {
         $row = StudentAttendance::query()
-            ->when($branch !== null, fn (Builder $query) => $query->where('branch_id', $branch))
             ->whereDate('date', Carbon::today()->toDateString())
-            ->whereHas('enrollment.student')
+            ->whereHas('enrollment.student', fn (Builder $query) => $query
+                ->when($branch !== null, fn (Builder $q) => $q->where('branch_id', $branch)))
             ->selectRaw('COUNT(*) as total, SUM(CASE WHEN status IN (?, ?) THEN 1 ELSE 0 END) as attended', [
                 AttendanceStatus::Present->value,
                 AttendanceStatus::Late->value,

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PublicAdmissionController;
+use App\Http\Controllers\Api\V1\PublicResultController;
 use App\Http\Controllers\Api\V1\SettingController;
 use Illuminate\Support\Facades\Route;
 
@@ -14,6 +15,10 @@ Route::prefix('public')->name('public.')->group(function () {
 
     Route::get('admissions/{application_no}/status', [PublicAdmissionController::class, 'status'])
         ->name('admissions.status');
+
+    Route::get('results', [PublicResultController::class, 'show'])
+        ->middleware('throttle:10,1')
+        ->name('results.show');
 
     // Safe subset for the public admission page: school name, logo URL,
     // active branches and their open classes. Never exposes secrets.

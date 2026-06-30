@@ -12,9 +12,11 @@
 | GET | /enrollments/{id}/results/{exam}/pdf | result.view + policy | Per-exam marksheet PDF (stream) |
 | GET | /enrollments/{id}/annual-result/pdf | result.view + policy | Annual result sheet PDF (stream) |
 | GET | /me/results | student/parent | Own (or linked child via `?student_id=`) results by session |
+| GET | /public/results | public, throttled | Published semester result lookup: `?branch_id=&roll_no=&class_id=&year=&semester=` |
 
 ## Computation rules (delegated to ResultService — single source)
 - Per-exam GPA = average of subject grade_points; `is_passed = false` if any subject grade is F.
 - Annual GPA = 0.25·S1 + 0.25·S2 + 0.50·Final, rounded to 2 dp; `is_passed` requires final exam passed and annual grade not F.
 - Generate is idempotent until publish; after publish → 409 on regenerate.
 - Students/parents can only read results where `published_at` is set; staff can preview unpublished.
+- Public result lookup returns only the selected published semester result and subject marks. `branch_id` and `class_id` come from the public settings branch/class dropdown payload. `semester` is one of `first_semester`, `second_semester`, `final`; the legacy typo `semister` is accepted as an alias. It exposes no ids and returns 422 when the selected class is outside the selected branch or when the roll/class/year tuple matches multiple sections.

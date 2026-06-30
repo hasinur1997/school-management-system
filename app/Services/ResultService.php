@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\EnrollmentStatus;
 use App\Enums\ExamStatus;
 use App\Enums\ExamType;
+use App\Models\AcademicSession;
 use App\Models\AnnualResult;
 use App\Models\Enrollment;
 use App\Models\Exam;
@@ -16,6 +17,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Owns the per-exam result engine: the GPA/grade computation, the repeatable
@@ -191,12 +193,15 @@ class ResultService
      * its student (Enrollment has no branch_id of its own). Out-of-branch ids
      * 404. The student is eager loaded for the downstream policy check.
      */
-    public function resolveEnrollment(int $id): Enrollment
+    public function resolveEnrollment(int|string $id): Enrollment
     {
-        return Enrollment::query()
+        $query = Enrollment::query()
             ->whereHas('student')
-            ->with('student')
-            ->findOrFail($id);
+            ->with('student');
+
+        return ctype_digit((string) $id)
+            ? $query->whereKey((int) $id)->firstOrFail()
+            : $query->where('public_id', $id)->firstOrFail();
     }
 
     /**
@@ -270,6 +275,73 @@ class ResultService
             'exam_results' => $examResults,
             'marks_by_exam' => $marksByExam,
             'annual' => $annual,
+        ];
+    }
+
+    /**
+     * Resolve the public branch/roll/class/year/semester lookup to a published
+     * exam result plus that exam's subject marks. Roll numbers are unique only
+     * within section, so a branch/class/year/roll tuple matching multiple
+     * sections is rejected instead of guessing which student to expose.
+     *
+     * @param  array{branch_id: int, roll_no: int, class_id: int, year: int, semester: ExamType}  $criteria
+     * @return array{
+     *     enrollment: Enrollment,
+     *     exam_result: ExamResult,
+     *     marks: Collection<int, Mark>,
+     * }
+     */
+    public function publicResult(array $criteria): array
+    {
+        $session = AcademicSession::query()
+            ->where('name', (string) $criteria['year'])
+            ->firstOrFail();
+
+        $matches = Enrollment::query()
+            ->whereHas('student', fn (Builder $query) => $query->where('branch_id', $criteria['branch_id']))
+            ->where('session_id', $session->id)
+            ->where('class_id', $criteria['class_id'])
+            ->where('roll_no', $criteria['roll_no'])
+            ->with([
+                'student:id,name_en,father_name_en,mother_name_en,date_of_birth',
+                'schoolClass:id,name',
+                'section:id,name',
+                'session:id,name',
+            ])
+            ->limit(2)
+            ->get();
+
+        abort_if($matches->isEmpty(), 404);
+
+        if ($matches->count() > 1) {
+            throw ValidationException::withMessages([
+                'roll_no' => ['Multiple students match this roll number for the selected class and year.'],
+            ]);
+        }
+
+        /** @var Enrollment $enrollment */
+        $enrollment = $matches->first();
+
+        $examResult = ExamResult::query()
+            ->where('enrollment_id', $enrollment->id)
+            ->whereNotNull('published_at')
+            ->whereHas('exam', fn (Builder $query) => $query
+                ->where('session_id', $session->id)
+                ->where('type', $criteria['semester']->value))
+            ->with('exam:id,type')
+            ->firstOrFail();
+
+        $marks = Mark::query()
+            ->where('enrollment_id', $enrollment->id)
+            ->where('exam_id', $examResult->exam_id)
+            ->with('subject:id,code,name')
+            ->orderBy('subject_id')
+            ->get();
+
+        return [
+            'enrollment' => $enrollment,
+            'exam_result' => $examResult,
+            'marks' => $marks,
         ];
     }
 
