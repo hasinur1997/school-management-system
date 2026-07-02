@@ -23,7 +23,7 @@ class ExamService
     public function list(array $filters, int $perPage): LengthAwarePaginator
     {
         return Exam::query()
-            ->with(['session', 'classes'])
+            ->with(['session', 'classes', 'branch'])
             // Super-admin branch narrowing; BranchScope already governs everyone
             // else (see App\Models\Scopes\BranchScope).
             ->when(isset($filters['branch_id']), fn (Builder $query) => $query->where('branch_id', $filters['branch_id']))
@@ -73,23 +73,42 @@ class ExamService
                 $exam->classes()->sync($classIds);
             }
 
-            return $exam->load(['session', 'classes']);
+            return $exam->load(['session', 'classes', 'branch']);
         });
     }
 
     /**
-     * Update an exam's editable fields (name/dates/status). Immutability and
-     * the published-freeze / status-regression guards are enforced by
-     * UpdateExamRequest.
+     * Update an exam's editable fields: name/dates/status, plus the class
+     * targeting (`all_classes` / `class_ids`) and — for an all-classes exam — the
+     * branch. Session and type immutability, the status-regression guard, and the
+     * class-overlap guard are enforced by UpdateExamRequest. The class targeting
+     * is re-synced only when the request carries it, so a name-only edit leaves
+     * the existing classes untouched.
      *
      * @param  array<string, mixed>  $data
      */
     public function update(Exam $exam, array $data): Exam
     {
-        $exam->fill(array_intersect_key($data, array_flip(['name', 'start_date', 'end_date', 'status'])));
-        $exam->save();
+        return DB::transaction(function () use ($exam, $data): Exam {
+            $exam->fill(array_intersect_key($data, array_flip(['name', 'start_date', 'end_date', 'status'])));
 
-        return $exam->load(['session', 'classes']);
+            if (array_key_exists('all_classes', $data)) {
+                $allClasses = (bool) $data['all_classes'];
+                $classIds = $allClasses ? [] : array_values($data['class_ids'] ?? []);
+
+                $exam->all_classes = $allClasses;
+                $exam->branch_id = $this->resolveBranchId($data, $classIds, $exam);
+                $exam->save();
+
+                // An all-classes exam keeps no pivot rows; an explicit list owns
+                // exactly the chosen classes.
+                $exam->classes()->sync($classIds);
+            } else {
+                $exam->save();
+            }
+
+            return $exam->load(['session', 'classes', 'branch']);
+        });
     }
 
     /**
@@ -133,7 +152,7 @@ class ExamService
      * @param  array<string, mixed>  $data
      * @param  list<int>  $classIds
      */
-    private function resolveBranchId(array $data, array $classIds): int
+    private function resolveBranchId(array $data, array $classIds, ?Exam $exam = null): int
     {
         if ($classIds !== []) {
             return (int) SchoolClass::findOrFail($classIds[0])->branch_id;
@@ -143,6 +162,12 @@ class ExamService
 
         if ($user !== null && ! $user->isSuperAdmin() && $user->branch_id !== null) {
             return (int) $user->branch_id;
+        }
+
+        // Super admin keeping an all-classes exam in its current branch supplies
+        // no branch_id; fall back to the exam's existing branch.
+        if (! isset($data['branch_id']) && $exam !== null) {
+            return (int) $exam->branch_id;
         }
 
         return (int) $data['branch_id'];

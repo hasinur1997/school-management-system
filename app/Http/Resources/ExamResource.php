@@ -22,6 +22,9 @@ class ExamResource extends JsonResource
         return [
             'id' => $this->public_id,
             'session_id' => $this->whenLoaded('session', fn () => $this->session->public_id),
+            // Branch the exam belongs to — feeds the super-admin edit form so it
+            // can pre-select the current branch.
+            'branch_id' => $this->whenLoaded('branch', fn () => $this->branch->public_id),
             'type' => $this->type->value,
             'name' => $this->name,
             // An exam targets all classes (the flag) or an explicit list (the

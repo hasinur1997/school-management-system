@@ -54,7 +54,7 @@ class ExamController extends ApiController
      */
     public function show(Exam $exam): JsonResponse
     {
-        return $this->success(ExamResource::make($exam));
+        return $this->success(ExamResource::make($exam->load(['session', 'classes', 'branch'])));
     }
 
     /**

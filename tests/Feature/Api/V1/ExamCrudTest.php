@@ -200,7 +200,7 @@ class ExamCrudTest extends TestCase
         $response->assertStatus(422)->assertJsonValidationErrors('type');
     }
 
-    public function test_changing_session_or_classes_is_rejected(): void
+    public function test_changing_session_is_rejected(): void
     {
         $exam = Exam::factory()->forClass($this->class)->create([
             'session_id' => $this->session->id,
@@ -209,10 +209,43 @@ class ExamCrudTest extends TestCase
         $response = $this->withToken($this->adminToken)
             ->putJson("/api/v1/exams/{$exam->public_id}", [
                 'session_id' => $this->session->id + 1,
-                'class_ids' => [$this->class->id],
             ]);
 
-        $response->assertStatus(422)->assertJsonValidationErrors(['session_id', 'class_ids']);
+        $response->assertStatus(422)->assertJsonValidationErrors('session_id');
+    }
+
+    public function test_changing_classes_is_allowed(): void
+    {
+        $exam = Exam::factory()->forClass($this->class)->create([
+            'session_id' => $this->session->id,
+            'type' => ExamType::FirstSemester,
+        ]);
+        $newClass = SchoolClass::factory()->create(['branch_id' => $this->branch->id]);
+
+        $response = $this->withToken($this->adminToken)
+            ->putJson("/api/v1/exams/{$exam->public_id}", [
+                'all_classes' => false,
+                'class_ids' => [$newClass->id],
+            ]);
+
+        $response->assertOk();
+        $this->assertDatabaseHas('exam_class', ['exam_id' => $exam->id, 'class_id' => $newClass->id]);
+        $this->assertDatabaseMissing('exam_class', ['exam_id' => $exam->id, 'class_id' => $this->class->id]);
+    }
+
+    public function test_switching_to_all_classes_is_allowed(): void
+    {
+        $exam = Exam::factory()->forClass($this->class)->create([
+            'session_id' => $this->session->id,
+            'type' => ExamType::FirstSemester,
+        ]);
+
+        $response = $this->withToken($this->adminToken)
+            ->putJson("/api/v1/exams/{$exam->public_id}", ['all_classes' => true]);
+
+        $response->assertOk()->assertJsonPath('data.all_classes', true);
+        $this->assertDatabaseHas('exams', ['id' => $exam->id, 'all_classes' => true]);
+        $this->assertDatabaseMissing('exam_class', ['exam_id' => $exam->id]);
     }
 
     public function test_published_exam_name_is_editable(): void
