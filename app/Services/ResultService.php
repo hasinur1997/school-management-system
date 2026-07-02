@@ -26,6 +26,9 @@ use Illuminate\Validation\ValidationException;
  */
 class ResultService
 {
+    /** Public lookup 404 copy — must not read like a missing endpoint. */
+    private const PUBLIC_RESULT_NOT_FOUND = 'No published result was found for those details. Please check the roll number, class, year, and semester.';
+
     public function __construct(private readonly GradeResolver $grades) {}
 
     /**
@@ -41,7 +44,15 @@ class ResultService
      */
     public function generateExamResults(Exam $exam): array
     {
-        abort_if($exam->status === ExamStatus::Published, 409, 'Results are frozen for published exams');
+        // Frozen means results were actually released, not merely that the
+        // marks lock flipped the exam to published. A marks-locked exam with
+        // no published result rows may still generate (and then publish).
+        $hasPublishedRows = ExamResult::query()
+            ->where('exam_id', $exam->id)
+            ->whereNotNull('published_at')
+            ->exists();
+
+        abort_if($exam->status === ExamStatus::Published && $hasPublishedRows, 409, 'Results are frozen for published exams');
 
         $marksByEnrollment = Mark::query()
             ->where('exam_id', $exam->id)
@@ -123,7 +134,17 @@ class ResultService
      */
     public function publishExamResults(Exam $exam): array
     {
-        abort_if($exam->status === ExamStatus::Published, 409, 'Results are already published');
+        $rows = ExamResult::query()->where('exam_id', $exam->id);
+
+        abort_if(! (clone $rows)->exists(), 422, 'No generated results to publish. Generate results first.');
+
+        // Already published only when nothing is left to stamp — a marks-locked
+        // exam whose rows were generated afterwards must still be publishable.
+        abort_if(
+            $exam->status === ExamStatus::Published && ! (clone $rows)->whereNull('published_at')->exists(),
+            409,
+            'Results are already published'
+        );
 
         return DB::transaction(function () use ($exam): array {
             $published = ExamResult::query()
@@ -295,7 +316,9 @@ class ResultService
     {
         $session = AcademicSession::query()
             ->where('name', (string) $criteria['year'])
-            ->firstOrFail();
+            ->first();
+
+        abort_if($session === null, 404, self::PUBLIC_RESULT_NOT_FOUND);
 
         $matches = Enrollment::query()
             ->whereHas('student', fn (Builder $query) => $query->where('branch_id', $criteria['branch_id']))
@@ -311,7 +334,7 @@ class ResultService
             ->limit(2)
             ->get();
 
-        abort_if($matches->isEmpty(), 404);
+        abort_if($matches->isEmpty(), 404, self::PUBLIC_RESULT_NOT_FOUND);
 
         if ($matches->count() > 1) {
             throw ValidationException::withMessages([
@@ -329,7 +352,9 @@ class ResultService
                 ->where('session_id', $session->id)
                 ->where('type', $criteria['semester']->value))
             ->with('exam:id,type')
-            ->firstOrFail();
+            ->first();
+
+        abort_if($examResult === null, 404, self::PUBLIC_RESULT_NOT_FOUND);
 
         $marks = Mark::query()
             ->where('enrollment_id', $enrollment->id)

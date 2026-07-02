@@ -273,6 +273,53 @@ class ExamResultsTest extends TestCase
             ->assertStatus(409);
     }
 
+    public function test_marks_locked_exam_without_published_results_can_still_generate_and_publish(): void
+    {
+        $enrollment = $this->enroll(1);
+        $this->fullPassingMarks($enrollment);
+
+        $token = $this->staffToken();
+
+        // Locking marks first (marks publish) moves the exam to published
+        // status before any results exist — generation must not be trapped.
+        $this->withToken($token)
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/marks/publish")
+            ->assertOk();
+
+        $this->assertDatabaseHas('exams', ['id' => $this->exam->id, 'status' => ExamStatus::Published->value]);
+
+        $this->withToken($token)
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/results/generate")
+            ->assertOk()
+            ->assertJsonPath('data.generated', 1);
+
+        $this->withToken($token)
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/results/publish")
+            ->assertOk()
+            ->assertJsonPath('data.published', 1);
+
+        $this->assertNotNull(ExamResult::where('enrollment_id', $enrollment->id)->first()->published_at);
+
+        // Once the rows are actually released, the freeze applies as before.
+        $this->withToken($token)
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/results/generate")
+            ->assertStatus(409);
+
+        $this->withToken($token)
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/results/publish")
+            ->assertStatus(409);
+    }
+
+    public function test_publish_without_generated_results_returns_422(): void
+    {
+        $this->enroll(1);
+
+        $this->withToken($this->staffToken())
+            ->postJson("/api/v1/exams/{$this->exam->public_id}/results/publish")
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'No generated results to publish. Generate results first.');
+    }
+
     public function test_browse_orders_by_gpa_desc_and_filters(): void
     {
         $top = $this->enroll(1);

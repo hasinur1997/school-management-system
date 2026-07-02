@@ -77,12 +77,19 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Model-not-found is prepared into NotFoundHttpException before the
         // render callbacks run, so both are normalized here — the internal
-        // "No query results for model …" message must never leak.
+        // "No query results for model …" message must never leak. Explicit
+        // `abort(404, '…')` messages (no wrapped previous exception) are
+        // trusted and surfaced as-is.
         $exceptions->render(function (NotFoundHttpException|ModelNotFoundException $e, Request $request) {
             if ($request->is('api/*')) {
+                $explicit = $e instanceof NotFoundHttpException
+                    && $e->getPrevious() === null
+                    && $e->getMessage() !== ''
+                    && ! str_starts_with($e->getMessage(), 'The route ');
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Resource not found.',
+                    'message' => $explicit ? $e->getMessage() : 'Resource not found.',
                 ], 404);
             }
         });
