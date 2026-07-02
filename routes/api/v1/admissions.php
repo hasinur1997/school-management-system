@@ -24,10 +24,10 @@ Route::middleware(['auth:sanctum', 'permission:admission.delete'])->group(functi
         ->name('admissions.force-destroy');
 });
 
-// Route::middleware(['auth:sanctum', 'permission:admission.view'])->group(function () {
-Route::get('admissions', [AdmissionController::class, 'index'])->name('admissions.index');
-Route::get('admissions/{admission}', [AdmissionController::class, 'show'])->name('admissions.show');
-// });
+Route::middleware(['auth:sanctum', 'permission:admission.view'])->group(function () {
+    Route::get('admissions', [AdmissionController::class, 'index'])->name('admissions.index');
+    Route::get('admissions/{admission}', [AdmissionController::class, 'show'])->name('admissions.show');
+});
 
 Route::middleware(['auth:sanctum', 'permission:admission.approve'])->group(function () {
     Route::post('admissions/{admission}/approve', [AdmissionController::class, 'approve'])->name('admissions.approve');
