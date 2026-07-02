@@ -7,9 +7,10 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * The attendance entry sheet: the date, the class and section names, and the
- * roster of active students in roll order. Each student's `status` is the
- * day's existing mark, or null when attendance has not yet been taken.
+ * The attendance entry sheet: the date, the class name, the section name (null
+ * when the roster spans the whole class), and the roster of active students in
+ * roll order. Each student's `status` is the day's existing mark, or null when
+ * attendance has not yet been taken.
  *
  * Wraps the array AttendanceService::sheet() returns.
  */
@@ -24,8 +25,8 @@ class AttendanceSheetResource extends JsonResource
 
         return [
             'date' => $this->resource['date'],
-            'class' => $this->resource['section']->schoolClass->name,
-            'section' => $this->resource['section']->name,
+            'class' => $this->resource['class']->name,
+            'section' => $this->resource['section']?->name,
             'students' => $this->resource['enrollments']->map(function (Enrollment $enrollment) use ($records): array {
                 $student = $enrollment->student;
                 $record = $records->get($enrollment->id);
@@ -36,6 +37,9 @@ class AttendanceSheetResource extends JsonResource
                     // student detail page.
                     'student_id' => $student->public_id,
                     'roll_no' => $enrollment->roll_no,
+                    // The row's own section, so a whole-class roster can label
+                    // students per section.
+                    'section' => $enrollment->section?->name,
                     'name_en' => $student->name_en,
                     'photo_url' => $student->photoUrl(),
                     'status' => $record?->status->value,

@@ -339,4 +339,123 @@ class AttendanceSaveTest extends TestCase
             ->getJson('/api/v1/attendance')
             ->assertStatus(403);
     }
+
+    public function test_whole_class_save_with_class_id_and_no_section(): void
+    {
+        $a = $this->enroll(1);
+
+        // A second section of the same class with its own student.
+        $sectionB = Section::factory()->create(['class_id' => $this->class->id, 'name' => 'B']);
+        $studentB = Student::factory()->create(['branch_id' => $this->branch->id]);
+        $b = Enrollment::factory()->create([
+            'student_id' => $studentB->id,
+            'session_id' => $this->session->id,
+            'class_id' => $this->class->id,
+            'section_id' => $sectionB->id,
+            'roll_no' => 1,
+            'status' => EnrollmentStatus::Active,
+        ]);
+
+        $this->withToken($this->token())
+            ->postJson('/api/v1/attendance', [
+                'class_id' => $this->class->id,
+                'date' => '2026-06-11',
+                'records' => [
+                    ['enrollment_id' => $a->id, 'status' => 'present'],
+                    ['enrollment_id' => $b->id, 'status' => 'absent'],
+                ],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.saved', 2);
+
+        $this->assertDatabaseHas('student_attendances', [
+            'enrollment_id' => $b->id, 'date' => '2026-06-11', 'status' => 'absent',
+        ]);
+    }
+
+    public function test_save_without_class_or_section_is_422(): void
+    {
+        $a = $this->enroll(1);
+
+        $this->withToken($this->token())
+            ->postJson('/api/v1/attendance', [
+                'date' => '2026-06-11',
+                'records' => [['enrollment_id' => $a->id, 'status' => 'present']],
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['class_id', 'section_id']);
+    }
+
+    public function test_whole_class_save_rejects_enrollment_of_another_class(): void
+    {
+        $otherClass = SchoolClass::factory()->create(['branch_id' => $this->branch->id, 'name' => 'Class 8']);
+        $otherSection = Section::factory()->create(['class_id' => $otherClass->id, 'name' => 'A']);
+        $foreign = $this->enroll(1, $otherSection);
+        // enroll() pins class_id to the test class; move it to the other class.
+        $foreign->update(['class_id' => $otherClass->id]);
+
+        $this->withToken($this->token())
+            ->postJson('/api/v1/attendance', [
+                'class_id' => $this->class->id,
+                'date' => '2026-06-11',
+                'records' => [['enrollment_id' => $foreign->id, 'status' => 'present']],
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['records.0.enrollment_id']);
+    }
+
+    public function test_super_admin_browse_narrows_by_branch_filter(): void
+    {
+        $inBranch = $this->enroll(1);
+        StudentAttendance::factory()->create([
+            'enrollment_id' => $inBranch->id,
+            'date' => '2026-06-11',
+            'status' => AttendanceStatus::Present,
+        ]);
+
+        // A second branch with its own class/section/enrollment + mark.
+        $otherBranch = Branch::factory()->create();
+        $otherClass = SchoolClass::factory()->create(['branch_id' => $otherBranch->id, 'name' => 'Class 8']);
+        $otherSection = Section::factory()->create(['class_id' => $otherClass->id, 'name' => 'B']);
+        $otherStudent = Student::factory()->create(['branch_id' => $otherBranch->id]);
+        $otherEnrollment = Enrollment::factory()->create([
+            'student_id' => $otherStudent->id,
+            'session_id' => $this->session->id,
+            'class_id' => $otherClass->id,
+            'section_id' => $otherSection->id,
+            'roll_no' => 1,
+            'status' => EnrollmentStatus::Active,
+        ]);
+        StudentAttendance::factory()->create([
+            'enrollment_id' => $otherEnrollment->id,
+            'date' => '2026-06-11',
+            'status' => AttendanceStatus::Absent,
+        ]);
+
+        $token = $this->token('super_admin');
+
+        // No filter: super admin sees both branches' records.
+        $this->withToken($token)
+            ->getJson('/api/v1/attendance?date=2026-06-11')
+            ->assertOk()
+            ->assertJsonCount(2, 'data');
+
+        // Narrowed to one branch: only that branch's record remains.
+        $this->withToken($token)
+            ->getJson("/api/v1/attendance?date=2026-06-11&branch_id={$this->branch->id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.status', 'present');
+
+        // The sanctum guard caches the resolved user across requests in a
+        // single test, so reset it before authenticating as a different user.
+        $this->app['auth']->forgetGuards();
+
+        // Non-super-admins have branch_id excluded; branch scope still governs.
+        $this->withToken($this->token())
+            ->getJson("/api/v1/attendance?date=2026-06-11&branch_id={$otherBranch->id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.status', 'present');
+    }
 }

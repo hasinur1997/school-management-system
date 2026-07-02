@@ -163,12 +163,60 @@ class AttendanceSheetTest extends TestCase
         Model::preventLazyLoading(false);
     }
 
-    public function test_missing_class_or_section_is_422(): void
+    public function test_missing_class_is_422(): void
     {
         $this->withToken($this->token())
             ->getJson('/api/v1/attendance/sheet?date=2026-06-11')
             ->assertStatus(422)
-            ->assertJsonValidationErrors(['class_id', 'section_id']);
+            ->assertJsonValidationErrors(['class_id']);
+    }
+
+    public function test_omitted_section_returns_the_whole_class_roster(): void
+    {
+        $this->enroll(1, 'Karim');
+
+        // A second section of the same class with its own student.
+        $sectionB = Section::factory()->create(['class_id' => $this->class->id, 'name' => 'B']);
+        $studentB = Student::factory()->create(['branch_id' => $this->branch->id, 'name_en' => 'Rahima']);
+        Enrollment::factory()->create([
+            'student_id' => $studentB->id,
+            'session_id' => $this->session->id,
+            'class_id' => $this->class->id,
+            'section_id' => $sectionB->id,
+            'roll_no' => 1,
+            'status' => EnrollmentStatus::Active,
+        ]);
+
+        $this->withToken($this->token())
+            ->getJson("/api/v1/attendance/sheet?class_id={$this->class->id}&date=2026-06-11")
+            ->assertOk()
+            ->assertJsonPath('data.section', null)
+            ->assertJsonCount(2, 'data.students')
+            // Ordered section (A, B) then roll; each row carries its section.
+            ->assertJsonPath('data.students.0.name_en', 'Karim')
+            ->assertJsonPath('data.students.0.section', 'A')
+            ->assertJsonPath('data.students.1.name_en', 'Rahima')
+            ->assertJsonPath('data.students.1.section', 'B');
+    }
+
+    public function test_super_admin_branch_filter_rejects_out_of_branch_class(): void
+    {
+        $this->enroll(1, 'Karim');
+        $otherBranch = Branch::factory()->create();
+
+        $token = $this->token('super_admin');
+
+        // The class is visible when the selected branch matches (or none is
+        // selected), and invalid under another branch's context.
+        $this->withToken($token)
+            ->getJson("/api/v1/attendance/sheet?class_id={$this->class->id}&branch_id={$this->branch->id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'data.students');
+
+        $this->withToken($token)
+            ->getJson("/api/v1/attendance/sheet?class_id={$this->class->id}&branch_id={$otherBranch->id}")
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['class_id']);
     }
 
     public function test_section_not_in_class_is_422(): void

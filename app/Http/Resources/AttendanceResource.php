@@ -25,6 +25,7 @@ class AttendanceResource extends JsonResource
             'enrollment_id' => $this->whenLoaded('enrollment', fn () => $this->enrollment->public_id),
             'roll_no' => $this->whenLoaded('enrollment', fn () => $this->enrollment->roll_no),
             'name_en' => $this->whenLoaded('enrollment', fn () => $this->enrollment->student->name_en),
+            'section' => $this->whenLoaded('enrollment', fn () => $this->enrollment->section?->name),
             'date' => $this->date->toDateString(),
             'status' => $this->status->value,
             'recorded_by' => $this->whenLoaded('recorder', fn () => $this->recorder->public_id),

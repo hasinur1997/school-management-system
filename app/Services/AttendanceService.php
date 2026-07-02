@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\AttendanceStatus;
 use App\Enums\EnrollmentStatus;
 use App\Models\Enrollment;
+use App\Models\SchoolClass;
 use App\Models\Section;
 use App\Models\Student;
 use App\Models\StudentAttendance;
@@ -19,28 +20,37 @@ use Illuminate\Support\Collection;
 class AttendanceService
 {
     /**
-     * Build the attendance entry sheet for a section on a given date: the active
-     * enrollments of the section in roll order, each carrying that date's
-     * existing mark (or null when not yet taken). TC/inactive enrollments are
-     * excluded by the active-status filter, so they never appear on the roster.
+     * Build the attendance entry sheet for a class on a given date: the active
+     * enrollments in roll order, each carrying that date's existing mark (or
+     * null when not yet taken). The section is optional — omitted, the roster
+     * spans the whole class (ordered section, then roll). TC/inactive
+     * enrollments are excluded by the active-status filter, so they never
+     * appear on the roster.
      *
      * The roster is two queries — enrollments (with student + photo media) and
      * the day's attendance rows keyed by enrollment — so there is no N+1.
      *
-     * @return array{date: string, section: Section, enrollments: \Illuminate\Database\Eloquent\Collection<int, Enrollment>, records: Collection<int, StudentAttendance>}
+     * @return array{date: string, class: SchoolClass, section: Section|null, enrollments: \Illuminate\Database\Eloquent\Collection<int, Enrollment>, records: Collection<int, StudentAttendance>}
      */
-    public function sheet(int $sectionId, Carbon $date): array
+    public function sheet(int $classId, ?int $sectionId, Carbon $date): array
     {
-        $section = Section::with('schoolClass')->findOrFail($sectionId);
+        $class = SchoolClass::findOrFail($classId);
+        $section = $sectionId !== null ? Section::findOrFail($sectionId) : null;
 
         $enrollments = Enrollment::query()
-            ->where('section_id', $sectionId)
+            ->where('class_id', $classId)
+            ->when($sectionId !== null, fn (Builder $query) => $query->where('section_id', $sectionId))
             ->where('status', EnrollmentStatus::Active)
             // Exclude enrollments whose student has been soft-deleted: their
             // enrollment stays Active (so a restore brings the roster back),
             // but the trashed student must not appear on the sheet.
             ->whereHas('student')
-            ->with('student.media')
+            ->with(['student.media', 'section'])
+            // Whole-class rosters group by section first, so each section's
+            // roll sequence stays contiguous.
+            ->orderBy(
+                Section::select('name')->whereColumn('sections.id', 'enrollments.section_id')
+            )
             ->orderBy('roll_no')
             ->get();
 
@@ -53,6 +63,7 @@ class AttendanceService
 
         return [
             'date' => $date->toDateString(),
+            'class' => $class,
             'section' => $section,
             'enrollments' => $enrollments,
             'records' => $records,
@@ -60,13 +71,15 @@ class AttendanceService
     }
 
     /**
-     * Bulk-save a section's attendance for one date. Structural validation
-     * (branch-scoped section, non-future date, active in-section enrollments)
-     * is handled by StoreAttendanceRequest; here we enforce the teacher
-     * assignment rule and perform a single bulk upsert per 500-row chunk.
+     * Bulk-save attendance for one date, scoped to a section — or a whole
+     * class when no section is given ("all sections" entry). Structural
+     * validation (branch-scoped section/class, non-future date, active
+     * in-scope enrollments) is handled by StoreAttendanceRequest; here we
+     * enforce the teacher assignment rule and perform a single bulk upsert per
+     * 500-row chunk.
      *
      * A teacher (a user with a teacher profile) must be assigned to the
-     * section's class via teacher_assignments; non-teacher staff who hold
+     * class via teacher_assignments; non-teacher staff who hold
      * attendance.create (admins) bypass the check. Re-posting the same date
      * updates existing rows via the (enrollment_id, date) unique key, so the
      * operation is idempotent.
@@ -74,11 +87,13 @@ class AttendanceService
      * @param  array<int, array{enrollment_id: int, status: string}>  $records
      * @return int the number of records saved
      */
-    public function saveBulk(int $sectionId, string $date, array $records, User $user): int
+    public function saveBulk(?int $sectionId, ?int $classId, string $date, array $records, User $user): int
     {
-        $section = Section::findOrFail($sectionId);
+        $targetClassId = $sectionId !== null
+            ? (int) Section::findOrFail($sectionId)->class_id
+            : (int) SchoolClass::findOrFail($classId)->id;
 
-        $this->assertAssignedToClass($user, $section->class_id);
+        $this->assertAssignedToClass($user, $targetClassId);
 
         $now = now();
 
@@ -111,7 +126,7 @@ class AttendanceService
     {
         $attendance->update(['status' => $status]);
 
-        return $attendance->load(['enrollment.student', 'recorder']);
+        return $attendance->load(['enrollment.student', 'enrollment.section', 'recorder']);
     }
 
     /**
@@ -168,15 +183,17 @@ class AttendanceService
 
     /**
      * Browse attendance records in the caller's branch (scope is automatic via
-     * the enrollment chain), filtered by class/section/date/status. The
-     * enrollment + student are eager loaded so the resource never lazy loads.
+     * the enrollment chain), filtered by class/section/date/status. Super
+     * admins bypass that scope, so an explicit branch_id filter narrows
+     * through the enrollment's student. The enrollment + student + section
+     * are eager loaded so the resource never lazy loads.
      *
      * @param  array<string, mixed>  $filters
      */
     public function list(array $filters, int $perPage): LengthAwarePaginator
     {
         return StudentAttendance::query()
-            ->with(['enrollment.student', 'recorder'])
+            ->with(['enrollment.student', 'enrollment.section', 'recorder'])
             ->when(
                 isset($filters['class_id']) || isset($filters['section_id']),
                 fn (Builder $query) => $query->whereHas('enrollment', function (Builder $enrollment) use ($filters): void {
@@ -184,6 +201,13 @@ class AttendanceService
                         ->when(isset($filters['class_id']), fn (Builder $q) => $q->where('class_id', $filters['class_id']))
                         ->when(isset($filters['section_id']), fn (Builder $q) => $q->where('section_id', $filters['section_id']));
                 })
+            )
+            ->when(
+                isset($filters['branch_id']),
+                fn (Builder $query) => $query->whereHas(
+                    'enrollment.student',
+                    fn (Builder $q) => $q->where('branch_id', $filters['branch_id'])
+                )
             )
             ->when(isset($filters['date']), fn (Builder $query) => $query->whereDate('date', $filters['date']))
             ->when(isset($filters['status']), fn (Builder $query) => $query->where('status', $filters['status']))

@@ -22,8 +22,9 @@ class AttendanceController extends ApiController
     public function __construct(private readonly AttendanceService $attendance) {}
 
     /**
-     * Return the attendance entry sheet for a section on a date (default today):
+     * Return the attendance entry sheet for a class on a date (default today):
      * the active roster in roll order with any marks already taken that day.
+     * The section is optional — omitted, the roster spans the whole class.
      */
     public function sheet(AttendanceSheetRequest $request): JsonResponse
     {
@@ -31,7 +32,11 @@ class AttendanceController extends ApiController
             ? Carbon::parse($request->validated('date'))
             : Carbon::today();
 
-        $sheet = $this->attendance->sheet($request->integer('section_id'), $date);
+        $sheet = $this->attendance->sheet(
+            $request->integer('class_id'),
+            $request->filled('section_id') ? $request->integer('section_id') : null,
+            $date,
+        );
 
         return $this->success(AttendanceSheetResource::make($sheet));
     }
@@ -42,7 +47,7 @@ class AttendanceController extends ApiController
     public function index(ListAttendanceRequest $request): JsonResponse
     {
         $records = $this->attendance->list(
-            $request->only(['class_id', 'section_id', 'date', 'status']),
+            $request->withBranchFilter($request->only(['class_id', 'section_id', 'date', 'status'])),
             $request->integer('per_page', 15),
         );
 
@@ -60,12 +65,14 @@ class AttendanceController extends ApiController
     }
 
     /**
-     * Bulk-save a section's attendance for one date (idempotent upsert).
+     * Bulk-save attendance for one date (idempotent upsert), scoped to a
+     * section — or a whole class when no section is given.
      */
     public function store(StoreAttendanceRequest $request): JsonResponse
     {
         $saved = $this->attendance->saveBulk(
-            $request->integer('section_id'),
+            $request->filled('section_id') ? $request->integer('section_id') : null,
+            $request->filled('class_id') ? $request->integer('class_id') : null,
             $request->validated('date'),
             $request->validated('records'),
             $request->user(),
