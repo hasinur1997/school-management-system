@@ -32,7 +32,7 @@ class ApprovedStudentResource extends JsonResource
             'enrollment' => [
                 'session' => $enrollment->session->name,
                 'class' => $enrollment->schoolClass->name,
-                'section' => $enrollment->section->name,
+                'section' => $enrollment->section?->name,
                 'roll_no' => $enrollment->roll_no,
             ],
         ];

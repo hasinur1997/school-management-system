@@ -141,6 +141,53 @@ class AdmissionApproveRejectTest extends TestCase
         Queue::assertPushed(SendCredentials::class, fn ($job) => $job->user->id === $user->id && $job->role === 'Student');
     }
 
+    public function test_omitted_roll_auto_assigns_next_in_class(): void
+    {
+        Queue::fake();
+        $token = $this->tokenForRole('admin');
+
+        // First approval into an empty class starts at roll 1.
+        $first = $this->makeApplication();
+        $this->withToken($token)
+            ->postJson("/api/v1/admissions/{$first->public_id}/approve", $this->approvePayload(['roll_no' => null]))
+            ->assertOk()
+            ->assertJsonPath('data.student.enrollment.roll_no', 1);
+
+        // A later approval continues from the class's highest roll, even when
+        // it lands in another section of the same class.
+        $second = $this->makeApplication();
+        $this->withToken($token)
+            ->postJson("/api/v1/admissions/{$second->public_id}/approve", $this->approvePayload(['roll_no' => 40]))
+            ->assertOk();
+
+        $otherSection = Section::factory()->create(['class_id' => $this->class->id, 'name' => 'B']);
+        $third = $this->makeApplication();
+        $this->withToken($token)
+            ->postJson("/api/v1/admissions/{$third->public_id}/approve", $this->approvePayload([
+                'roll_no' => null,
+                'section_id' => $otherSection->id,
+            ]))
+            ->assertOk()
+            ->assertJsonPath('data.student.enrollment.roll_no', 41);
+    }
+
+    public function test_approve_without_section_enrolls_under_class_only(): void
+    {
+        Queue::fake();
+
+        $application = $this->makeApplication();
+
+        $this->withToken($this->tokenForRole('admin'))
+            ->postJson("/api/v1/admissions/{$application->public_id}/approve", $this->approvePayload(['section_id' => null]))
+            ->assertOk()
+            ->assertJsonPath('data.student.enrollment.section', null)
+            ->assertJsonPath('data.student.enrollment.roll_no', 12);
+
+        $student = Student::where('application_id', $application->id)->firstOrFail();
+        $enrollment = Enrollment::where('student_id', $student->id)->firstOrFail();
+        $this->assertNull($enrollment->section_id);
+    }
+
     public function test_approve_with_parent_creates_link_and_parent_credentials(): void
     {
         Queue::fake();

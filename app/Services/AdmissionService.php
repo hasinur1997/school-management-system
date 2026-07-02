@@ -180,7 +180,8 @@ class AdmissionService
 
             $session = AcademicSession::findOrFail($data['session_id']);
             $class = SchoolClass::findOrFail($data['class_id']);
-            $section = Section::findOrFail($data['section_id']);
+            // Section is optional — a class may have none.
+            $section = isset($data['section_id']) ? Section::findOrFail($data['section_id']) : null;
 
             // Resolve the parent's contact up front (when requested) so the
             // student/parent logins never collide on the globally-unique
@@ -249,12 +250,23 @@ class AdmissionService
                 $photo->copy($student, 'photo');
             }
 
+            // Roll defaults to the class's next number for the session (last
+            // assigned + 1, class-wide so it also satisfies the per-section
+            // uniqueness). lockForUpdate serialises concurrent approvals into
+            // the same class so two can't compute the same roll.
+            $rollNo = $data['roll_no']
+                ?? (int) Enrollment::query()
+                    ->where('session_id', $session->id)
+                    ->where('class_id', $class->id)
+                    ->lockForUpdate()
+                    ->max('roll_no') + 1;
+
             $enrollment = Enrollment::create([
                 'student_id' => $student->id,
                 'session_id' => $session->id,
                 'class_id' => $class->id,
-                'section_id' => $section->id,
-                'roll_no' => $data['roll_no'],
+                'section_id' => $section?->id,
+                'roll_no' => $rollNo,
                 'status' => EnrollmentStatus::Active,
             ]);
 
