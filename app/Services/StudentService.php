@@ -114,7 +114,7 @@ class StudentService
                 'student_id' => $student->id,
                 'session_id' => $session->id,
                 'class_id' => $data['class_id'],
-                'section_id' => $data['section_id'],
+                'section_id' => $data['section_id'] ?? null,
                 'roll_no' => $data['roll_no'],
                 'status' => EnrollmentStatus::Active,
             ]);

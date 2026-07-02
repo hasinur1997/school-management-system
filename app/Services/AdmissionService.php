@@ -250,14 +250,16 @@ class AdmissionService
                 $photo->copy($student, 'photo');
             }
 
-            // Roll defaults to the class's next number for the session (last
-            // assigned + 1, class-wide so it also satisfies the per-section
-            // uniqueness). lockForUpdate serialises concurrent approvals into
-            // the same class so two can't compute the same roll.
+            // Roll defaults to the next number within the session+class+section
+            // bucket (last assigned + 1), so every section starts from 1; a
+            // sectionless class forms its own class-wide bucket. lockForUpdate
+            // serialises concurrent approvals into the same bucket so two can't
+            // compute the same roll.
             $rollNo = $data['roll_no']
                 ?? (int) Enrollment::query()
                     ->where('session_id', $session->id)
                     ->where('class_id', $class->id)
+                    ->where('section_id', $section?->id)
                     ->lockForUpdate()
                     ->max('roll_no') + 1;
 

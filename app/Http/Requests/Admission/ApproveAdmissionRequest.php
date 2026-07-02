@@ -14,7 +14,8 @@ use Illuminate\Validation\Validator;
  * the academic session, the class (may override the desired class), an
  * optional section (a class may have none), an optional roll number (unique
  * within session+class+section, null section forming its own bucket;
- * auto-assigned as the class's next roll when absent), an optional
+ * auto-assigned as that bucket's next roll when absent, so every section
+ * starts from 1), an optional
  * admission number (auto-generated when absent), and whether to create a linked
  * parent account. Class/section validity is checked branch-scoped in after(),
  * so out-of-branch ids report as invalid rather than leaking other branches.

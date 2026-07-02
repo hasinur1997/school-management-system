@@ -141,25 +141,26 @@ class AdmissionApproveRejectTest extends TestCase
         Queue::assertPushed(SendCredentials::class, fn ($job) => $job->user->id === $user->id && $job->role === 'Student');
     }
 
-    public function test_omitted_roll_auto_assigns_next_in_class(): void
+    public function test_omitted_roll_auto_assigns_next_in_section(): void
     {
         Queue::fake();
         $token = $this->tokenForRole('admin');
 
-        // First approval into an empty class starts at roll 1.
+        // First approval into an empty section starts at roll 1.
         $first = $this->makeApplication();
         $this->withToken($token)
             ->postJson("/api/v1/admissions/{$first->public_id}/approve", $this->approvePayload(['roll_no' => null]))
             ->assertOk()
             ->assertJsonPath('data.student.enrollment.roll_no', 1);
 
-        // A later approval continues from the class's highest roll, even when
-        // it lands in another section of the same class.
+        // Push section A's highest roll up so the buckets are distinguishable.
         $second = $this->makeApplication();
         $this->withToken($token)
             ->postJson("/api/v1/admissions/{$second->public_id}/approve", $this->approvePayload(['roll_no' => 40]))
             ->assertOk();
 
+        // Rolls number per section: another section of the same class starts
+        // again from 1, regardless of section A's rolls.
         $otherSection = Section::factory()->create(['class_id' => $this->class->id, 'name' => 'B']);
         $third = $this->makeApplication();
         $this->withToken($token)
@@ -168,7 +169,17 @@ class AdmissionApproveRejectTest extends TestCase
                 'section_id' => $otherSection->id,
             ]))
             ->assertOk()
-            ->assertJsonPath('data.student.enrollment.roll_no', 41);
+            ->assertJsonPath('data.student.enrollment.roll_no', 1);
+
+        // …and continues from that section's own highest roll.
+        $fourth = $this->makeApplication();
+        $this->withToken($token)
+            ->postJson("/api/v1/admissions/{$fourth->public_id}/approve", $this->approvePayload([
+                'roll_no' => null,
+                'section_id' => $otherSection->id,
+            ]))
+            ->assertOk()
+            ->assertJsonPath('data.student.enrollment.roll_no', 2);
     }
 
     public function test_approve_without_section_enrolls_under_class_only(): void

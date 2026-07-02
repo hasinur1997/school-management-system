@@ -13,7 +13,9 @@ use Illuminate\Validation\Validator;
  * Validates direct student creation — the office path that mints a student
  * without an admission application. It carries the full profile (the same
  * mutable set as UpdateStudentRequest), the initial enrollment (session/class/
- * section/roll), an optional admission number (auto-generated when absent), and
+ * optional section/roll — a class may have no sections, roll unique within
+ * session+class+section with a null section forming its own bucket), an
+ * optional admission number (auto-generated when absent), and
  * the optional linked-parent box mirroring ApproveAdmissionRequest. Class and
  * section validity is checked branch-scoped in after(), so out-of-branch ids
  * report as invalid rather than leaking other branches. The *_id fields arrive
@@ -84,16 +86,17 @@ class StoreStudentRequest extends FormRequest
             'nationality' => ['required', 'string', 'max:50'],
             'caste' => ['nullable', 'string', 'max:50'],
 
-            // Initial enrollment. roll_no is unique within session+class+section.
+            // Initial enrollment. roll_no is unique within session+class+section,
+            // a null section (a class may have none) forming its own bucket.
             'session_id' => ['required', 'integer', Rule::exists('academic_sessions', 'id')],
             'class_id' => ['required', 'integer'],
-            'section_id' => ['required', 'integer'],
+            'section_id' => ['nullable', 'integer'],
             'roll_no' => [
                 'required', 'integer', 'min:1', 'max:65535',
                 Rule::unique('enrollments', 'roll_no')->where(fn ($query) => $query
                     ->where('session_id', $this->integer('session_id'))
                     ->where('class_id', $this->integer('class_id'))
-                    ->where('section_id', $this->integer('section_id'))),
+                    ->where('section_id', $this->input('section_id') === null ? null : $this->integer('section_id'))),
             ],
 
             // Auto-generated per branch+year when absent.
@@ -146,6 +149,10 @@ class StoreStudentRequest extends FormRequest
             if ($class === null) {
                 $validator->errors()->add('class_id', 'The selected class is invalid.');
 
+                return;
+            }
+
+            if ($this->input('section_id') === null) {
                 return;
             }
 
