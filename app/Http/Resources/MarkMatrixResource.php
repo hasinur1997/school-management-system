@@ -42,6 +42,7 @@ class MarkMatrixResource extends JsonResource
             'students' => $this->resource['enrollments']->map(function (Enrollment $enrollment) use ($marks): array {
                 return [
                     'enrollment_id' => $enrollment->public_id,
+                    'student_id' => $enrollment->student->public_id,
                     'roll_no' => $enrollment->roll_no,
                     'name_en' => $enrollment->student->name_en,
                     'sid' => $enrollment->student->admission_no,
